@@ -25,14 +25,38 @@ const invalidInputs: unknown[] = [
 ];
 
 describe("enum definition", () => {
-	it("preserves the values and object identity without adding runtime properties", () => {
+	it("returns a frozen copy without adding runtime properties", () => {
 		expect.hasAssertions();
 		const values = { Active: "active", Inactive: "inactive" };
 		const result = defineEnum(statusBrand, values);
 
-		expect(result).toBe(values);
+		expect(result).not.toBe(values);
+		expect(Object.isFrozen(result)).toBe(true);
+		expect(Object.isFrozen(values)).toBe(false);
 		expect(result).toStrictEqual({ Active: "active", Inactive: "inactive" });
 		expect(Object.getOwnPropertySymbols(result)).toStrictEqual([]);
+	});
+
+	it("does not change when the original object is mutated", () => {
+		expect.hasAssertions();
+		const values = { Active: "active" };
+		const result = defineEnum(statusBrand, values);
+
+		values.Active = "changed";
+
+		expect(result.Active).toBe("active");
+		expect(isEnum(result, "active")).toBe(true);
+		expect(isEnum(result, "changed")).toBe(false);
+	});
+
+	it("prevents changing, adding, and deleting members at runtime", () => {
+		expect.hasAssertions();
+		const result = defineEnum(statusBrand, { Active: "active" });
+
+		expect(Reflect.set(result, "Active", "changed")).toBe(false);
+		expect(Reflect.set(result, "Inactive", "inactive")).toBe(false);
+		expect(Reflect.deleteProperty(result, "Active")).toBe(false);
+		expect(result).toStrictEqual({ Active: "active" });
 	});
 
 	it("infers readonly branded literal members and their union", () => {

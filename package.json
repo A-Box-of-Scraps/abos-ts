@@ -21,6 +21,7 @@
     "check": "npm run --silent build && npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
     "check:duplicates": "jscpd --fail-on-empty --no-tips",
     "check:unused": "knip",
+    "example:enum": "node packages/utils/examples/enum.ts",
     "format": "dprint fmt",
     "format:check": "dprint check",
     "lint": "oxlint --config oxlint.config.ts .",

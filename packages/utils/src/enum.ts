@@ -12,7 +12,7 @@ function defineEnum<const Brand extends symbol, const Values extends Record<stri
 ): { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> } {
 	// Branding is type-only; the supplied strings remain unchanged at runtime.
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-	return values as { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> };
+	return Object.freeze({ ...values }) as { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> };
 }
 
 function isEnum<const Values extends Record<string, string>>(

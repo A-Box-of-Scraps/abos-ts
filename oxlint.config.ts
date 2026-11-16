@@ -103,6 +103,12 @@ export default defineConfig({
 	},
 	overrides: [
 		{
+			files: ["examples/**/*.ts", "packages/*/examples/**/*.ts"],
+			rules: {
+				"vitest/require-hook": "off",
+			},
+		},
+		{
 			files: ["test/**/*.ts", "packages/*/test/**/*.ts"],
 			rules: {
 				"vitest/require-top-level-describe": "off",
