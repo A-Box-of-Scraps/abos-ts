@@ -1,28 +1,36 @@
 declare const enumBrand: unique symbol;
 
-type EnumMember<Value extends string, Brand extends symbol> = Value & {
+type EnumMember<Value, Brand extends symbol> = Value & {
 	readonly [enumBrand]: Brand;
+};
+
+// Reject broad and nullish member types before applying the type-only brand.
+type ValidEnumValues<Values> = unknown extends Values ? never : {
+	[Key in keyof Values]: unknown extends Values[Key] ? never
+		: Extract<Values[Key], null | undefined> extends never ? Values[Key]
+		: never;
 };
 
 type EnumValue<Values> = Values[keyof Values];
 
-function defineEnum<const Brand extends symbol, const Values extends Record<string, string>>(
+function defineEnum<const Brand extends symbol, const Values extends Record<string, unknown>>(
 	_brand: Brand & (symbol extends Brand ? never : unknown),
-	values: Values,
+	values: Values & ValidEnumValues<Values>,
 ): { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> } {
-	// Branding is type-only; the supplied strings remain unchanged at runtime.
+	// Branding is type-only; the supplied values remain unchanged at runtime.
 	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-	return Object.freeze({ ...values }) as { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> };
+	return Object.freeze<Values>({ ...values }) as { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> };
 }
 
-function isEnum<const Values extends Record<string, string>>(
+function isEnum<const Values extends Record<string, unknown>>(
 	values: Values,
 	input: unknown,
 ): input is EnumValue<Values> {
-	return typeof input === "string" && Object.values(values).includes(input);
+	// Reference-valued members match by identity, not by structure.
+	return Object.values(values).includes(input);
 }
 
-function parseEnum<const Values extends Record<string, string>>(
+function parseEnum<const Values extends Record<string, unknown>>(
 	values: Values,
 	input: unknown,
 	createError: (input: unknown) => Error,

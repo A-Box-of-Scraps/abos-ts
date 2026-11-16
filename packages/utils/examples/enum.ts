@@ -49,3 +49,39 @@ assert.throws(() => parseEnum(AccountStatus, "expired", createStatusError), {
 // Enum objects are frozen; their values remain ordinary strings for serialization.
 assert(Object.isFrozen(AccountStatus));
 assert.equal(JSON.stringify({ status: parsed }), '{"status":"active"}');
+
+// Members can also be numbers, booleans, bigints, symbols, or reference values.
+const settingBrand = Symbol("Setting");
+const automatic = Symbol("automatic");
+const defaults = { retries: 3 };
+const Setting = defineEnum(settingBrand, {
+	Disabled: false,
+	RetryLimit: 3,
+	LargeLimit: 1n,
+	Automatic: automatic,
+	Defaults: defaults,
+});
+type Setting = EnumValue<typeof Setting>;
+
+function parseSetting(value: unknown): Setting {
+	return parseEnum(Setting, value, (invalid) => new TypeError(`Invalid setting: ${String(invalid)}`));
+}
+
+assert.equal(parseSetting(false), Setting.Disabled);
+// oxlint-disable-next-line no-magic-numbers -- Parse a raw numeric input rather than an already-branded member.
+assert.equal(parseSetting(3), Setting.RetryLimit);
+// oxlint-disable-next-line no-magic-numbers -- Parse a raw bigint input rather than an already-branded member.
+assert.equal(parseSetting(1n), Setting.LargeLimit);
+assert.equal(parseSetting(automatic), Setting.Automatic);
+assert.equal(isEnum(Setting, "3"), false); // No coercion.
+
+// Reference values match by identity, and only the enum container is frozen.
+assert.equal(parseSetting(defaults), Setting.Defaults);
+assert.equal(isEnum(Setting, { retries: 3 }), false);
+assert(Object.isFrozen(Setting));
+assert.equal(Object.isFrozen(defaults), false);
+
+// Nullish and broad member types are rejected at compile time:
+// Rejected: defineEnum(settingBrand, { Missing: null });
+// Rejected: defineEnum(settingBrand, { Missing: undefined });
+// Members typed as unknown, any, or nullable unions are also rejected.

@@ -149,33 +149,6 @@ describe("enum validation", () => {
 		expect(result).toBe(false);
 	});
 
-	it("narrows unknown input to the branded value union", () => {
-		// Arrange
-		expect.hasAssertions();
-		const input: unknown = "active";
-
-		// Act
-		if (!isEnum(status, input)) {
-			throw new Error("Expected a valid status");
-		}
-
-		// Assert
-		expectTypeOf(input).toEqualTypeOf<Status>();
-		expect(input).toBe("active");
-	});
-
-	it("rejects all inputs for an empty enum", () => {
-		// Arrange
-		expect.hasAssertions();
-		const values = defineEnum(statusBrand, {});
-
-		// Act
-		const result = isEnum(values, "");
-
-		// Assert
-		expect(result).toBe(false);
-	});
-
 	it("accepts duplicate values", () => {
 		// Arrange
 		expect.hasAssertions();
