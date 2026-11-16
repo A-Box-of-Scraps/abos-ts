@@ -20,7 +20,7 @@
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": ["CHANGELOG.md","dist"],
   "scripts": {
     "build": "node ../../scripts/build-package.ts",
     "prepack": "npm run build"
