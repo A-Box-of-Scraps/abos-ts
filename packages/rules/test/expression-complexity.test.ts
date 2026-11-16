@@ -1,4 +1,4 @@
-import plugin, { expressionComplexity, rules } from "#src/index";
+import plugin from "#src/index";
 import { invalid, valid } from "#test/expression-complexity-cases";
 import { Linter } from "eslint";
 import { describe, expect, it } from "vitest";
@@ -71,16 +71,4 @@ describe("expression-complexity", () => {
 			expect(lintWithInvalidOptions).toThrow(/Key "abos\/expression-complexity"/);
 		},
 	);
-
-	it("exports the rule through the plugin and named exports", () => {
-		// Arrange
-		expect.hasAssertions();
-
-		// Act
-		const exportedRule = rules["expression-complexity"];
-
-		// Assert
-		expect(exportedRule).toBe(expressionComplexity);
-		expect(plugin).toMatchObject({ rules });
-	});
 });

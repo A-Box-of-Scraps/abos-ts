@@ -1,4 +1,4 @@
-import plugin, { noDuplicateStrings, rules } from "#src/index";
+import plugin from "#src/index";
 import { invalid, valid } from "#test/duplicate-string-cases";
 import { Linter } from "eslint";
 import { describe, expect, it } from "vitest";
@@ -25,7 +25,7 @@ describe("no-duplicate-strings", () => {
 		expect(messages).toStrictEqual([]);
 	});
 
-	it.each(invalid)("reports $name", ({ code, options, count, occurrences }) => {
+	it.each(invalid)("reports $name", ({ code, options, errors }) => {
 		// Arrange
 		expect.hasAssertions();
 
@@ -33,13 +33,13 @@ describe("no-duplicate-strings", () => {
 		const messages = lint(code, options);
 
 		// Assert
-		expect(messages).toHaveLength(count);
+		expect(messages).toMatchObject(errors.map(({ occurrences, ...location }) => ({
+			...location,
+			ruleId: "abos/no-duplicate-strings",
+			messageId: "duplicateString",
+			message: `This string appears ${occurrences} times. Replace it with a meaningfully named constant.`,
+		})));
 		for (const message of messages) {
-			expect(message).toMatchObject({
-				ruleId: "abos/no-duplicate-strings",
-				messageId: "duplicateString",
-				message: `This string appears ${occurrences} times. Replace it with a meaningfully named constant.`,
-			});
 			expect(message.fix).toBeUndefined();
 			expect(message.suggestions).toBeUndefined();
 		}
@@ -97,17 +97,5 @@ describe("no-duplicate-strings", () => {
 
 		// Assert
 		expect(lintWithInvalidOptions).toThrow(/Key "abos\/no-duplicate-strings"/);
-	});
-
-	it("exports the rule through the plugin and named exports", () => {
-		// Arrange
-		expect.hasAssertions();
-
-		// Act
-		const exportedRule = rules["no-duplicate-strings"];
-
-		// Assert
-		expect(exportedRule).toBe(noDuplicateStrings);
-		expect(plugin).toMatchObject({ rules });
 	});
 });

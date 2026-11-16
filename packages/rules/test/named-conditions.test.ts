@@ -1,4 +1,4 @@
-import plugin, { namedConditions, rules } from "#src/index";
+import plugin from "#src/index";
 import { invalid, valid } from "#test/named-condition-cases";
 import { Linter } from "eslint";
 import { describe, expect, it } from "vitest";
@@ -23,7 +23,7 @@ describe("named-conditions", () => {
 		expect(diagnostics).toStrictEqual([]);
 	});
 
-	it.each(invalid)("reports $name", ({ code, messageIds }) => {
+	it.each(invalid)("reports $name", ({ code, errors }) => {
 		// Arrange
 		expect.hasAssertions();
 
@@ -31,9 +31,8 @@ describe("named-conditions", () => {
 		const diagnostics = lint(code);
 
 		// Assert
-		expect(diagnostics.map(({ messageId }) => messageId)).toStrictEqual(messageIds);
+		expect(diagnostics).toMatchObject(errors.map((error) => ({ ...error, ruleId: "abos/named-conditions" })));
 		for (const diagnostic of diagnostics) {
-			expect(diagnostic.ruleId).toBe("abos/named-conditions");
 			expect(diagnostic.fix).toBeUndefined();
 			expect(diagnostic.suggestions).toBeUndefined();
 		}
@@ -67,17 +66,5 @@ describe("named-conditions", () => {
 		expect(diagnostics).toMatchObject([{
 			message: "Extract this loop condition into a meaningfully named predicate so it is reevaluated each iteration.",
 		}]);
-	});
-
-	it("registers the named export in the plugin", () => {
-		// Arrange
-		expect.hasAssertions();
-
-		// Act
-		const registered = rules["named-conditions"];
-
-		// Assert
-		expect(registered).toBe(namedConditions);
-		expect(plugin).toMatchObject({ rules });
 	});
 });

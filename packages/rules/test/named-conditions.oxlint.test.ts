@@ -1,5 +1,6 @@
 import { namedConditions } from "#src/index";
 import { invalid, typescriptInvalid, typescriptValid, valid } from "#test/named-condition-cases";
+import { toOxlintError } from "#test/oxlint-errors";
 import { RuleTester } from "oxlint/plugins-dev";
 import { describe, expect, it } from "vitest";
 
@@ -7,39 +8,37 @@ import { describe, expect, it } from "vitest";
 const oxlintRule = namedConditions as unknown as Parameters<RuleTester["run"]>[1];
 
 describe("named-conditions in Oxlint", () => {
-	it("checks branch and loop conditions", () => {
+	it.each([...valid, ...typescriptValid])("allows $name", (testCase) => {
 		// Arrange
 		expect.hasAssertions();
 		const tester = new RuleTester();
-		const cases = invalid.map(({ name, code, messageIds }) => ({
-			name,
-			code,
-			errors: messageIds.map((messageId) => ({ messageId })),
-		}));
 
 		// Act
-		function runCases(): void {
-			tester.run("named-conditions", oxlintRule, { valid, invalid: cases });
+		function runCase(): void {
+			tester.run("named-conditions", oxlintRule, { valid: [testCase], invalid: [] });
 		}
 
 		// Assert
-		expect(runCases).not.toThrow();
+		expect(runCase).not.toThrow();
 	});
 
-	it.each(typescriptInvalid)("checks TypeScript conditions: $name", ({ name, code, messageIds }) => {
+	it.each([...invalid, ...typescriptInvalid])("reports $name", (testCase) => {
 		// Arrange
 		expect.hasAssertions();
-		const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
+		const tester = new RuleTester();
 
 		// Act
-		function runCases(): void {
+		function runCase(): void {
 			tester.run("named-conditions", oxlintRule, {
-				valid: typescriptValid,
-				invalid: [{ name, code, errors: messageIds.map((messageId) => ({ messageId })) }],
+				valid: [],
+				invalid: [{
+					...testCase,
+					errors: testCase.errors.map(toOxlintError),
+				}],
 			});
 		}
 
 		// Assert
-		expect(runCases).not.toThrow();
+		expect(runCase).not.toThrow();
 	});
 });

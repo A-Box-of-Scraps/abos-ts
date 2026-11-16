@@ -1,7 +1,28 @@
+import { readFileSync } from "node:fs";
+
 interface TestCase {
 	name: string;
 	code: string;
+	filename?: string;
 	options?: { threshold?: number; ignoreStrings?: string[]; shortString?: number }[];
+}
+
+interface ExpectedError {
+	occurrences: number;
+	line?: number;
+	column?: number;
+}
+
+interface InvalidTestCase extends TestCase {
+	errors: ExpectedError[];
+}
+
+function duplicateErrors({ occurrences }: { occurrences: number }): ExpectedError[] {
+	return Array.from({ length: occurrences }, () => ({ occurrences }));
+}
+
+function readFixture(path: string): string {
+	return readFileSync(new URL(`fixtures/no-duplicate-strings/${path}`, import.meta.url), "utf8");
 }
 
 const valid: TestCase[] = [
@@ -33,67 +54,98 @@ const valid: TestCase[] = [
 	{ name: "untrimmed values", code: "use('long enough', ' long enough', 'long enough ')" },
 ];
 
-const invalid: (TestCase & { count: number; occurrences: number })[] = [
-	{ name: "default threshold", code: "use('long enough', 'long enough', 'long enough')", count: 3, occurrences: 3 },
+const invalid: InvalidTestCase[] = [
+	{
+		name: "default threshold",
+		code: "use('long enough', 'long enough', 'long enough')",
+		errors: duplicateErrors({ occurrences: 3 }),
+	},
 	{
 		name: "explicit defaults",
 		code: "use('long enough', 'long enough', 'long enough')",
 		options: [{}],
-		count: 3,
-		occurrences: 3,
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
-	{ name: "minimum length boundary", code: "use('1234567890', '1234567890', '1234567890')", count: 3, occurrences: 3 },
+	{
+		name: "minimum length boundary",
+		code: "use('1234567890', '1234567890', '1234567890')",
+		errors: duplicateErrors({ occurrences: 3 }),
+	},
 	{
 		name: "more than the threshold",
 		code: "use('long enough', 'long enough', 'long enough', 'long enough')",
-		count: 4,
-		occurrences: 4,
+		errors: duplicateErrors({ occurrences: 4 }),
 	},
 	{
 		name: "mixed quotes and static templates",
 		code: "use('long enough', \"long enough\", `long enough`)",
-		count: 3,
-		occurrences: 3,
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
 	{
 		name: "decoded escape sequences",
 		code: "use('long enough', 'long\\u0020enough', `long enough`)",
-		count: 3,
-		occurrences: 3,
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
 	{
 		name: "nested scopes",
-		code: "const a = 'long enough'; function f() { return 'long enough'; } function g() { return 'long enough'; }",
-		count: 3,
-		occurrences: 3,
+		code: readFixture("invalid/nested-scopes.js"),
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
 	{
-		name: "multiple duplicate groups",
-		code: "use('long enough', 'long enough', 'long enough', 'another string', 'another string', 'another string')",
-		count: 6,
-		occurrences: 3,
+		name: "multiple duplicate groups with different counts",
+		code: readFixture("invalid/multiple-groups.js"),
+		errors: [
+			{ occurrences: 3, line: 1, column: 5 },
+			{ occurrences: 4, line: 2, column: 5 },
+			{ occurrences: 3, line: 3, column: 5 },
+			{ occurrences: 4, line: 4, column: 5 },
+			{ occurrences: 3, line: 5, column: 5 },
+			{ occurrences: 4, line: 6, column: 5 },
+			{ occurrences: 4, line: 7, column: 5 },
+		],
+	},
+	{
+		name: "excluding one value leaves other duplicates reportable",
+		code:
+			"use('long enough', 'long enough', 'long enough');\nuse('another string', 'another string', 'another string');",
+		options: [{ ignoreStrings: ["long enough"] }],
+		errors: [
+			{ occurrences: 3, line: 2, column: 5 },
+			{ occurrences: 3, line: 2, column: 23 },
+			{ occurrences: 3, line: 2, column: 41 },
+		],
 	},
 	{
 		name: "lower threshold and shorter strings",
 		code: "use('abc', 'abc')",
 		options: [{ threshold: 2, shortString: 3 }],
-		count: 2,
-		occurrences: 2,
+		errors: duplicateErrors({ occurrences: 2 }),
 	},
 	{
 		name: "zero minimum length includes empty strings",
 		code: "use('', '', ``)",
 		options: [{ shortString: 0 }],
-		count: 3,
-		occurrences: 3,
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
 	{
 		name: "exclusions are exact, not patterns or substrings",
 		code: "use('long enough', 'long enough', 'long enough')",
 		options: [{ ignoreStrings: ["long", "long.*", "Long enough", " long enough "] }],
-		count: 3,
-		occurrences: 3,
+		errors: duplicateErrors({ occurrences: 3 }),
 	},
 ];
 
-export { invalid, valid };
+const typescriptValid: TestCase[] = [{
+	name: "typed string below the threshold",
+	code: "const message: string = 'long enough'",
+	filename: "input.ts",
+}];
+
+const typescriptInvalid: InvalidTestCase[] = [{
+	name: "duplicate strings in typed declarations",
+	code: "const a: string = 'long enough'; const b: string = 'long enough'; const c: string = 'long enough';",
+	filename: "input.ts",
+	errors: duplicateErrors({ occurrences: 3 }),
+}];
+
+export { invalid, typescriptInvalid, typescriptValid, valid };

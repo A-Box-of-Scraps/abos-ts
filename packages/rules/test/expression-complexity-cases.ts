@@ -1,7 +1,16 @@
+import { readFileSync } from "node:fs";
+
 interface TestCase {
 	name: string;
 	code: string;
+	filename?: string;
 	options?: { max?: number }[];
+}
+
+interface InvalidTestCase extends TestCase {
+	count: number;
+	operators: number;
+	max: number;
 }
 
 const valid: TestCase[] = [
@@ -22,11 +31,11 @@ const valid: TestCase[] = [
 	{ name: "independent function bodies", code: "a && (() => b && c)", options: [{ max: 1 }] },
 ];
 
-const invalid: (TestCase & { count: number; operators: number; max: number })[] = [
+const invalid: InvalidTestCase[] = [
 	{ name: "default maximum", code: "a && b && c && d && e", count: 1, operators: 4, max: 3 },
 	{ name: "empty options", code: "a || b || c || d || e", options: [{}], count: 1, operators: 4, max: 3 },
 	{
-		name: "user example",
+		name: "custom maximum exceeded in a condition",
 		code: "if (exists && isUser && isAdmin && somethingElse) {}",
 		options: [{ max: 2 }],
 		count: 1,
@@ -41,11 +50,27 @@ const invalid: (TestCase & { count: number; operators: number; max: number })[] 
 	{ name: "zero maximum", code: "a && b", options: [{ max: 0 }], count: 1, operators: 1, max: 0 },
 	{
 		name: "separate expressions",
-		code: "const first = a && b && c && d && e; function check() { return a || b || c || d || e; }",
+		code: readFileSync(
+			new URL("fixtures/expression-complexity/invalid/separate-expressions.js", import.meta.url),
+			"utf8",
+		),
 		count: 2,
 		operators: 4,
 		max: 3,
 	},
 ];
 
-export { invalid, valid };
+const typescriptValid: TestCase[] = [{
+	name: "typed expression at the default boundary",
+	code: "const allowed: boolean = a && b && c && d",
+	filename: "input.ts",
+}];
+
+const typescriptInvalid: InvalidTestCase[] = [
+	{ name: "as expression", code: "a && ((b || c || d || e) as boolean)" },
+	{ name: "satisfies expression", code: "a && ((b || c || d || e) satisfies boolean)" },
+	{ name: "type assertion", code: "a && (<boolean>(b || c || d || e))" },
+	{ name: "non-null assertion", code: "a && (b || c || d || e)!" },
+].map(({ name, code }) => ({ name, code, filename: "input.ts", count: 1, operators: 4, max: 3 }));
+
+export { invalid, typescriptInvalid, typescriptValid, valid };

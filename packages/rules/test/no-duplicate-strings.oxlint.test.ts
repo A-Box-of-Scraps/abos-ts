@@ -1,5 +1,6 @@
 import { noDuplicateStrings } from "#src/index";
-import { invalid, valid } from "#test/duplicate-string-cases";
+import { invalid, typescriptInvalid, typescriptValid, valid } from "#test/duplicate-string-cases";
+import { toOxlintError } from "#test/oxlint-errors";
 import { RuleTester } from "oxlint/plugins-dev";
 import { describe, expect, it } from "vitest";
 
@@ -7,47 +8,44 @@ import { describe, expect, it } from "vitest";
 const oxlintRule = noDuplicateStrings as unknown as Parameters<RuleTester["run"]>[1];
 
 describe("no-duplicate-strings in Oxlint", () => {
-	it("checks JavaScript strings with configurable thresholds and exclusions", () => {
+	it.each([...valid, ...typescriptValid])("allows $name", (testCase) => {
 		// Arrange
 		expect.hasAssertions();
 		const tester = new RuleTester();
-		const cases = invalid.map(({ name, code, options, count }) => ({
-			name,
-			code,
-			options: options ?? [],
-			errors: Array.from({ length: count }, () => ({ messageId: "duplicateString" })),
-		}));
 
 		// Act
-		function runCases(): void {
-			tester.run("no-duplicate-strings", oxlintRule, { valid, invalid: cases });
+		function runCase(): void {
+			tester.run("no-duplicate-strings", oxlintRule, { valid: [testCase], invalid: [] });
 		}
 
 		// Assert
-		expect(runCases).not.toThrow();
+		expect(runCase).not.toThrow();
 	});
 
-	it("counts strings in TypeScript files", () => {
+	it.each([...invalid, ...typescriptInvalid])("reports $name", ({ name, code, options, filename, errors }) => {
 		// Arrange
 		expect.hasAssertions();
-		const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
+		const tester = new RuleTester();
 
 		// Act
-		function runCases(): void {
+		function runCase(): void {
 			tester.run("no-duplicate-strings", oxlintRule, {
-				valid: ["const message: string = 'long enough'"],
+				valid: [],
 				invalid: [{
-					code: "const a: string = 'long enough'; const b: string = 'long enough'; const c: string = 'long enough';",
-					errors: [
-						{ messageId: "duplicateString" },
-						{ messageId: "duplicateString" },
-						{ messageId: "duplicateString" },
-					],
+					name,
+					code,
+					options: options ?? [],
+					filename: filename ?? "input.js",
+					errors: errors.map(({ occurrences, ...location }) => toOxlintError({
+						...location,
+						messageId: "duplicateString",
+						data: { count: occurrences },
+					})),
 				}],
 			});
 		}
 
 		// Assert
-		expect(runCases).not.toThrow();
+		expect(runCase).not.toThrow();
 	});
 });

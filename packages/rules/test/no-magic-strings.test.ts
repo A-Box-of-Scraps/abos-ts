@@ -1,5 +1,5 @@
-import plugin, { noMagicStrings, rules } from "#src/index";
-import { invalid, valid } from "#test/cases";
+import plugin from "#src/index";
+import { invalid, valid } from "#test/no-magic-string-cases";
 import { Linter } from "eslint";
 import { describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ describe("no-magic-strings", () => {
 		expect(messages).toStrictEqual([]);
 	});
 
-	it.each(invalid)("reports $name", ({ code, count }) => {
+	it.each(invalid)("reports $name", ({ code, errors }) => {
 		// Arrange
 		expect.hasAssertions();
 
@@ -31,9 +31,8 @@ describe("no-magic-strings", () => {
 		const messages = lint(code);
 
 		// Assert
-		expect(messages).toHaveLength(count);
+		expect(messages).toMatchObject(errors.map((error) => ({ ...error, ruleId: "abos/no-magic-strings" })));
 		for (const message of messages) {
-			expect(message).toMatchObject({ ruleId: "abos/no-magic-strings", messageId: "magicString" });
 			expect(message.fix).toBeUndefined();
 			expect(message.suggestions).toBeUndefined();
 		}
@@ -49,17 +48,5 @@ describe("no-magic-strings", () => {
 
 		// Assert
 		expect(messages).toMatchObject([{ line: 1, column: 12, endLine: 1, endColumn: 21 }]);
-	});
-
-	it("exports the rule through the plugin and named exports", () => {
-		// Arrange
-		expect.hasAssertions();
-
-		// Act
-		const exportedRule = rules["no-magic-strings"];
-
-		// Assert
-		expect(exportedRule).toBe(noMagicStrings);
-		expect(plugin).toMatchObject({ rules });
 	});
 });

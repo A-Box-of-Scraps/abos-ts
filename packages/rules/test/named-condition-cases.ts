@@ -27,20 +27,26 @@ const inlineValid = [
 ];
 
 const inlineInvalid = [
-	{ code: "if (exists && isUser && hasPrivileges) {}", messageIds: ["namedBoolean"] },
-	{ code: "if (a || b) {}", messageIds: ["namedBoolean"] },
-	{ code: "if (!(a && b)) {}", messageIds: ["namedBoolean"] },
-	{ code: "if ((a && b) || (c && d)) {}", messageIds: ["namedBoolean"] },
-	{ code: "if (check(a && b)) {}", messageIds: ["namedBoolean"] },
-	{ code: "if ((a && b) === expected) {}", messageIds: ["namedBoolean"] },
-	{ code: "if (a ?? (b || c)) {}", messageIds: ["namedBoolean"] },
-	{ code: "if (ready ? a && b : c) {}", messageIds: ["namedBoolean"] },
-	{ code: "while (hasWork && !isCancelled) {}", messageIds: ["namedPredicate"] },
-	{ code: "do {} while (a || b)", messageIds: ["namedPredicate"] },
-	{ code: "for (; a && b;) {}", messageIds: ["namedPredicate"] },
-	{ code: "a && b ? allow() : deny()", messageIds: ["namedBoolean"] },
-	{ code: "a || b ? allow() : deny()", messageIds: ["namedBoolean"] },
-	{ code: "if ((a && b) ? c : d) {}", messageIds: ["namedBoolean"] },
+	{ code: "if (exists && isUser && hasPrivileges) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if (a || b) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if (!(a && b)) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if ((a && b) || (c && d)) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if (check(a && b)) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if ((a && b) === expected) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if (a ?? (b || c)) {}", errors: [{ messageId: "namedBoolean" }] },
+	{
+		code: "if (ready ? a && b : c) {}",
+		errors: [{ messageId: "namedBoolean", line: 1, column: 5, endLine: 1, endColumn: 23 }],
+	},
+	{ code: "while (hasWork && !isCancelled) {}", errors: [{ messageId: "namedPredicate" }] },
+	{ code: "do {} while (a || b)", errors: [{ messageId: "namedPredicate" }] },
+	{ code: "for (; a && b;) {}", errors: [{ messageId: "namedPredicate" }] },
+	{ code: "a && b ? allow() : deny()", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "a || b ? allow() : deny()", errors: [{ messageId: "namedBoolean" }] },
+	{
+		code: "if ((a && b) ? c : d) {}",
+		errors: [{ messageId: "namedBoolean", line: 1, column: 6, endLine: 1, endColumn: 12 }],
+	},
 ];
 
 const valid = [
@@ -53,19 +59,30 @@ const valid = [
 ];
 
 const invalid = [
-	...inlineInvalid.map(({ code, messageIds }) => ({ name: code, code, messageIds })),
+	...inlineInvalid.map(({ code, errors }) => ({ name: code, code, errors })),
 	...[
-		{ name: "invalid/nested-branches.js", messageIds: ["namedBoolean", "namedBoolean"] },
-		{ name: "invalid/nested-loops.js", messageIds: ["namedPredicate", "namedBoolean"] },
-		{ name: "invalid/function-boundaries.js", messageIds: ["namedBoolean", "namedBoolean"] },
-	].map(({ name, messageIds }) => ({ name, messageIds, code: readFixture(name) })),
+		{ name: "invalid/nested-branches.js", errors: [{ messageId: "namedBoolean" }, { messageId: "namedBoolean" }] },
+		{ name: "invalid/nested-loops.js", errors: [{ messageId: "namedPredicate" }, { messageId: "namedBoolean" }] },
+		{ name: "invalid/function-boundaries.js", errors: [{ messageId: "namedBoolean" }, { messageId: "namedBoolean" }] },
+	].map(({ name, errors }) => ({ name, errors, code: readFixture(name) })),
+	{
+		name: "invalid/callback-condition.js",
+		code: readFixture("invalid/callback-condition.js"),
+		errors: [{ messageId: "namedBoolean", line: 3, column: 7, endLine: 3, endColumn: 32 }],
+	},
 ];
 
-const typescriptValid = [{ name: "valid/named-boolean.ts", code: readFixture("valid/named-boolean.ts") }];
-const typescriptInvalid = [{
-	name: "invalid/type-wrappers.ts",
-	code: readFixture("invalid/type-wrappers.ts"),
-	messageIds: ["namedBoolean", "namedBoolean", "namedBoolean", "namedBoolean"],
+const typescriptValid = [{
+	name: "typed named boolean",
+	code: "const isAdmin: boolean = exists && isUser; if (isAdmin) { allow(); }",
+	filename: "input.ts",
 }];
+
+const typescriptInvalid = [
+	{ name: "as expression", code: "if ((exists && isUser) as boolean) { allow(); }" },
+	{ name: "satisfies expression", code: "if ((isGuest || isAnonymous) satisfies boolean) { deny(); }" },
+	{ name: "type assertion", code: "if (<boolean>(exists && isUser)) { allow(); }" },
+	{ name: "non-null assertion", code: "if ((exists && isUser)!) { allow(); }" },
+].map(({ name, code }) => ({ name, code, filename: "input.ts", errors: [{ messageId: "namedBoolean" }] }));
 
 export { invalid, typescriptInvalid, typescriptValid, valid };
