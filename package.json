@@ -21,6 +21,7 @@
     "check": "npm run --silent build && npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
     "check:duplicates": "jscpd --fail-on-empty --no-tips",
     "check:unused": "knip",
+    "example:enum": "node packages/utils/examples/enum.ts",
     "example:explicit-state": "node packages/utils/examples/explicit-state.ts",
     "format": "dprint fmt",
     "format:check": "dprint check",
