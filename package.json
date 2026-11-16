@@ -1,0 +1,50 @@
+{
+  "name": "abos-ts",
+  "version": "0.1.0",
+  "description": "TypeScripts utilities and lint rules shared across projects.",
+  "homepage": "https://github.com/A-Box-of-Scraps/abos-ts#readme",
+  "bugs": {
+    "url": "https://github.com/A-Box-of-Scraps/abos-ts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/A-Box-of-Scraps/abos-ts.git"
+  },
+  "license": "MIT",
+  "author": "A Box of Scraps",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
+    "check:duplicates": "jscpd --fail-on-empty --no-tips",
+    "check:unused": "knip",
+    "format": "dprint fmt",
+    "format:check": "dprint check",
+    "lint": "oxlint --config oxlint.config.ts .",
+    "lint:fix": "oxlint --config oxlint.config.ts --fix .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.1.0",
+    "dprint": "^0.64.3",
+    "jscpd": "^5.4.3",
+    "knip": "^6.45.1",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
+    "typescript": "~7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "npm": ">=12.0.0"
+  },
+  "allowScripts": {
+    "dprint@0.64.3": true
+  }
+}
