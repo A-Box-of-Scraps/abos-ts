@@ -17,18 +17,32 @@ function describeState(state: "idle" | "running"): string {
 
 describe("exhaustiveness assertion", () => {
 	it("accepts only never and never returns", () => {
+		// Arrange
 		expect.hasAssertions();
+		const input = "unhandled";
+
+		// Act
+		function assertUnhandled(): never {
+			// @ts-expect-error An unhandled union member cannot be passed as never.
+			return assertNever(input);
+		}
+
+		// Assert
 		expectTypeOf(assertNever).parameters.toEqualTypeOf<[value: never]>();
 		expectTypeOf(assertNever).toEqualTypeOf<(value: never) => never>();
-		expect(() => {
-			// @ts-expect-error An unhandled union member cannot be passed as never.
-			assertNever("unhandled");
-		}).toThrow("Unexpected value: unhandled");
+		expect(assertUnhandled).toThrow("Unexpected value: unhandled");
 	});
 
 	it("supports exhaustive union handling", () => {
+		// Arrange
 		expect.hasAssertions();
-		expect(describeState("idle")).toBe("Waiting");
-		expect(describeState("running")).toBe("Working");
+
+		// Act
+		const idleDescription = describeState("idle");
+		const runningDescription = describeState("running");
+
+		// Assert
+		expect(idleDescription).toBe("Waiting");
+		expect(runningDescription).toBe("Working");
 	});
 });
