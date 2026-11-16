@@ -103,6 +103,14 @@ export default defineConfig({
 	},
 	overrides: [
 		{
+			files: ["test/**/*.ts", "packages/*/test/**/*.ts"],
+			rules: {
+				"vitest/require-top-level-describe": "off",
+				"vitest/no-hooks": "off",
+				"vitest/no-importing-vitest-globals": "off",
+			},
+		},
+		{
 			files: ["*.config.ts"],
 			rules: {
 				"no-magic-numbers": "off",
