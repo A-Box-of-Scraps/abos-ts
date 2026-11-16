@@ -1,36 +1,16 @@
-// Numeric fixtures exercise reverse lookup without coercion.
+// Numeric literals exercise reverse lookup without coercion.
 /* oxlint-disable no-magic-numbers */
 import { defineEnum, reverseEnum } from "#src/index";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-const statusBrand = Symbol("Status");
-const status = defineEnum(statusBrand, { Active: "active", Pending: 0, Empty: "" });
-
-const validInputs = [
-	{ input: "active", expected: "Active" },
-	{ input: status.Active, expected: "Active" },
-	{ input: 0, expected: "Pending" },
-	{ input: status.Pending, expected: "Pending" },
-	{ input: "", expected: "Empty" },
-];
-const invalidInputs: unknown[] = [
-	"Active",
-	"missing",
-	"0",
-	1,
-	true,
-	false,
-	undefined,
-	// oxlint-disable-next-line unicorn/no-null -- Reverse lookup accepts arbitrary external input.
-	null,
-	0n,
-	Symbol("active"),
-	{ Active: "active" },
-	["active"],
-];
+const status = defineEnum({ Enabled: "enabled", Disabled: 0, Empty: "" });
 
 describe("enum reverse lookup", () => {
-	it.each(validInputs)("returns $expected for input $input", ({ input, expected }) => {
+	it.each([
+		{ input: "enabled", expected: "Enabled" },
+		{ input: 0, expected: "Disabled" },
+		{ input: "", expected: "Empty" },
+	])("returns $expected for $input", ({ input, expected }) => {
 		// Arrange
 		expect.hasAssertions();
 
@@ -39,68 +19,72 @@ describe("enum reverse lookup", () => {
 
 		// Assert
 		expect(result).toBe(expected);
-		expectTypeOf(result).toEqualTypeOf<"Active" | "Pending" | "Empty" | undefined>();
+		expectTypeOf(result).toEqualTypeOf<"Enabled" | "Disabled" | "Empty" | undefined>();
 	});
 
-	it.each(invalidInputs)("returns undefined for non-member %# without coercion", (input) => {
+	it.each(["Enabled", "missing", "0", 1, false, undefined, 0n, Symbol("enabled"), {}, []])(
+		"returns undefined for non-member %#",
+		(input) => {
+			// Arrange
+			expect.hasAssertions();
+
+			// Act
+			const result = reverseEnum(status, input);
+
+			// Assert
+			expect(result).toBeUndefined();
+		},
+	);
+
+	it("returns undefined for an empty definition", () => {
 		// Arrange
 		expect.hasAssertions();
+		const empty = defineEnum({});
 
 		// Act
-		const result = reverseEnum(status, input);
-
-		// Assert
-		expect(result).toBeUndefined();
-	});
-
-	it("returns undefined for an empty enum", () => {
-		// Arrange
-		expect.hasAssertions();
-		const empty = defineEnum(statusBrand, {});
-
-		// Act
-		const result = reverseEnum(empty, "active");
+		const result = reverseEnum(empty, "enabled");
 
 		// Assert
 		expect(result).toBeUndefined();
 		expectTypeOf(result).toEqualTypeOf<undefined>();
 	});
 
-	it("returns the last key for duplicate string and number values", () => {
+	it("returns the last member for duplicate string and numeric values", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum(statusBrand, { First: "same", Second: "same", Third: 1, Fourth: 1 });
+		const values = defineEnum({ First: "same", Last: "same", Zero: 0, OtherZero: 0 });
 
 		// Act
-		const stringKey = reverseEnum(values, "same");
-		const numericKey = reverseEnum(values, values.Third);
+		const text = reverseEnum(values, "same");
+		const number = reverseEnum(values, 0);
 
 		// Assert
-		expect(stringKey).toBe("Second");
-		expect(numericKey).toBe("Fourth");
+		expect(text).toBe("Last");
+		expect(number).toBe("OtherZero");
 	});
 
-	it("returns an empty member name without treating it as a missing match", () => {
+	it("distinguishes string and numeric values with the same spelling", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum(statusBrand, { "": "empty" });
+		const values = defineEnum({ Text: "0", Number: 0 });
 
 		// Act
-		const result = reverseEnum(values, "empty");
+		const text = reverseEnum(values, "0");
+		const number = reverseEnum(values, 0);
 
 		// Assert
-		expect(result).toBe("");
-		expectTypeOf(result).toEqualTypeOf<"" | undefined>();
+		expect(text).toBe("Text");
+		expect(number).toBe("Number");
 	});
 });
 
 describe("enum reverse lookup edge cases", () => {
 	it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
-		"matches non-finite numeric value %# and returns the last duplicate",
+		"matches non-finite number %# and returns its last duplicate",
 		(input) => {
 			// Arrange
 			expect.hasAssertions();
-			const values = defineEnum(statusBrand, { First: input, Last: input });
+			const values = defineEnum({ First: input, Last: input });
 
 			// Act
 			const result = reverseEnum(values, input);
@@ -110,10 +94,10 @@ describe("enum reverse lookup edge cases", () => {
 		},
 	);
 
-	it("matches signed zero like the membership guard", () => {
+	it("matches signed zero", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum(statusBrand, { Zero: 0 });
+		const values = defineEnum({ Zero: 0 });
 
 		// Act
 		const result = reverseEnum(values, -0);
@@ -122,37 +106,25 @@ describe("enum reverse lookup edge cases", () => {
 		expect(result).toBe("Zero");
 	});
 
-	it("distinguishes string and number members with the same spelling", () => {
+	it("preserves empty names and stringifies numeric names", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum(statusBrand, { Number: 1, String: "1" });
+		const values = defineEnum({ "": "empty", 0: "zero" });
 
 		// Act
-		const numberKey = reverseEnum(values, 1);
-		const stringKey = reverseEnum(values, "1");
+		const empty = reverseEnum(values, "empty");
+		const numeric = reverseEnum(values, "zero");
 
 		// Assert
-		expect(numberKey).toBe("Number");
-		expect(stringKey).toBe("String");
+		expect(empty).toBe("");
+		expect(numeric).toBe("0");
+		expectTypeOf(numeric).toEqualTypeOf<"" | "0" | undefined>();
 	});
 
-	it("stringifies numeric keys when given a plain value map", () => {
+	it("ignores symbol keys in plain value maps", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = { 0: "zero" };
-
-		// Act
-		const result = reverseEnum(values, "zero");
-
-		// Assert
-		expect(result).toBe("0");
-		expectTypeOf(result).toEqualTypeOf<"0" | undefined>();
-	});
-
-	it("ignores symbol keys when given a plain value map", () => {
-		// Arrange
-		expect.hasAssertions();
-		const key = Symbol("Key");
+		const key = Symbol("Hidden");
 		const values = { [key]: "hidden" };
 
 		// Act
@@ -161,5 +133,22 @@ describe("enum reverse lookup edge cases", () => {
 		// Assert
 		expect(result).toBeUndefined();
 		expectTypeOf(result).toEqualTypeOf<undefined>();
+	});
+
+	it("preserves names from every branch of a union-shaped definition", () => {
+		// Arrange
+		expect.hasAssertions();
+		type Members = { Enabled: "enabled" } | { Disabled: 0 };
+		function createStatus(members: Members): Readonly<Members> {
+			return defineEnum(members);
+		}
+		const values = createStatus({ Disabled: 0 });
+
+		// Act
+		const result = reverseEnum(values, 0);
+
+		// Assert
+		expect(result).toBe("Disabled");
+		expectTypeOf(result).toEqualTypeOf<"Enabled" | "Disabled" | undefined>();
 	});
 });

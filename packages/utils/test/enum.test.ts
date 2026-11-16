@@ -1,212 +1,212 @@
-// Assert exact booleans rather than truthiness for the type guard.
-/* oxlint-disable vitest/prefer-to-be-truthy, vitest/prefer-to-be-falsy */
-import { defineEnum, type EnumMember, type EnumValue, isEnum, parseEnum } from "#src/index";
-import { describe, expect, expectTypeOf, it, vi } from "vitest";
-
-const statusBrand = Symbol("Status");
-const status = defineEnum(statusBrand, { Active: "active", Inactive: "inactive", Empty: "" });
-type Status = EnumValue<typeof status>;
-
-const invalidInputs: unknown[] = [
-	"Active",
-	"ACTIVE",
-	"missing",
-	" active ",
-	"toString",
-	// oxlint-disable-next-line unicorn/no-null -- External input can contain null.
-	null,
-	undefined,
-	// oxlint-disable-next-line no-magic-numbers -- Exercise a non-string primitive.
-	0,
-	true,
-	{},
-	[],
-	Symbol("active"),
-];
+// Numeric literals and exact booleans exercise member inference and freezing.
+/* oxlint-disable no-magic-numbers, vitest/prefer-to-be-truthy, vitest/prefer-to-be-falsy */
+import { assertNever, defineEnum, type EnumValue } from "#src/index";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 describe("enum definition", () => {
-	it("returns a frozen copy without adding runtime properties", () => {
+	it("freezes and returns the supplied object without adding properties", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = { Active: "active", Inactive: "inactive" } as const;
+		const members = { Enabled: "enabled", Disabled: 0 } as const;
 
 		// Act
-		const result = defineEnum(statusBrand, values);
+		const status = defineEnum(members);
 
 		// Assert
-		expect(result).not.toBe(values);
-		expect(Object.isFrozen(result)).toBe(true);
-		expect(Object.isFrozen(values)).toBe(false);
-		expect(result).toStrictEqual({ Active: "active", Inactive: "inactive" });
-		expect(Object.getOwnPropertySymbols(result)).toStrictEqual([]);
+		expect(status).toBe(members);
+		expect(Object.isFrozen(members)).toBe(true);
+		expect(status).toStrictEqual({ Enabled: "enabled", Disabled: 0 });
+		expect(Object.getOwnPropertySymbols(status)).toStrictEqual([]);
 	});
 
-	it("does not change when the original object is mutated", () => {
+	it("prevents changing, adding, and deleting members through either reference", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = { Active: "active" } as const;
-		const result = defineEnum(statusBrand, values);
+		const members = { Enabled: "enabled", Disabled: 0 };
+		const status = defineEnum(members);
 
 		// Act
-		const changed = Reflect.set(values, "Active", "changed");
-
-		// Assert
-		expect(changed).toBe(true);
-		expect(result.Active).toBe("active");
-		expect(isEnum(result, "active")).toBe(true);
-		expect(isEnum(result, "changed")).toBe(false);
-	});
-
-	it("prevents changing, adding, and deleting members at runtime", () => {
-		// Arrange
-		expect.hasAssertions();
-		const result = defineEnum(statusBrand, { Active: "active" });
-
-		// Act
-		const changed = Reflect.set(result, "Active", "changed");
-		const added = Reflect.set(result, "Inactive", "inactive");
-		const deleted = Reflect.deleteProperty(result, "Active");
+		const changed = Reflect.set(members, "Enabled", "changed");
+		const added = Reflect.set(status, "Pending", "pending");
+		const deleted = Reflect.deleteProperty(status, "Disabled");
 
 		// Assert
 		expect(changed).toBe(false);
 		expect(added).toBe(false);
 		expect(deleted).toBe(false);
-		expect(result).toStrictEqual({ Active: "active" });
+		expect(status).toStrictEqual({ Enabled: "enabled", Disabled: 0 });
 	});
 
-	it("infers readonly branded literal members and their union", () => {
+	it("infers readonly string and numeric literals without as const", () => {
 		// Arrange
 		expect.hasAssertions();
 
 		// Act
-		const values = defineEnum(statusBrand, { Active: "active", Inactive: "inactive", Empty: "" });
+		const status = defineEnum({ Enabled: "enabled", Disabled: 0 });
 
 		// Assert
-		expect(values.Active).toBe("active");
-		expectTypeOf(values).toEqualTypeOf<{
-			readonly Active: EnumMember<"active", typeof statusBrand>;
-			readonly Inactive: EnumMember<"inactive", typeof statusBrand>;
-			readonly Empty: EnumMember<"", typeof statusBrand>;
-		}>();
-		expectTypeOf<Status>().toEqualTypeOf<
-			| EnumMember<"active", typeof statusBrand>
-			| EnumMember<"inactive", typeof statusBrand>
-			| EnumMember<"", typeof statusBrand>
-		>();
-		expectTypeOf<"active">().not.toExtend<Status>();
+		expect(status.Enabled).toBe("enabled");
+		expectTypeOf(status).toEqualTypeOf<{ readonly Enabled: "enabled"; readonly Disabled: 0 }>();
+		expectTypeOf<EnumValue<typeof status>>().toEqualTypeOf<"enabled" | 0>();
 	});
 
-	it("rejects brands without a unique symbol type", () => {
+	it("preserves widened types rather than imposing native enum initializer restrictions", () => {
 		// Arrange
 		expect.hasAssertions();
-		// oxlint-disable-next-line typescript/no-inferrable-types -- Explicit widening exercises rejection of non-unique brands.
-		const widenedBrand: symbol = Symbol("Status");
+		const members = { Name: "name", Count: Number("1") };
 
 		// Act
-		// @ts-expect-error Inline symbols do not preserve a unique symbol type.
-		const inline = defineEnum(Symbol("Status"), { Active: "active" });
-		// @ts-expect-error Widened symbols cannot distinguish enum domains.
-		const widened = defineEnum(widenedBrand, { Active: "active" });
+		const values = defineEnum(members);
 
 		// Assert
-		expect(inline.Active).toBe("active");
-		expect(widened.Active).toBe("active");
+		expect(values).toBe(members);
+		expectTypeOf(values).toEqualTypeOf<{ readonly Name: string; readonly Count: number }>();
+		expectTypeOf<EnumValue<typeof values>>().toEqualTypeOf<string | number>();
 	});
 
-	it("distinguishes identical literals with different brands", () => {
+	it("supports empty definitions", () => {
 		// Arrange
 		expect.hasAssertions();
-		const otherBrand = Symbol("OtherStatus");
 
 		// Act
-		const other = defineEnum(otherBrand, { Active: "active" });
+		const values = defineEnum({});
 
 		// Assert
-		expect(other.Active).toBe(status.Active);
-		expectTypeOf(other.Active).not.toExtend<Status>();
+		expect(values).toStrictEqual({});
+		expect(Object.isFrozen(values)).toBe(true);
+		expectTypeOf<EnumValue<typeof values>>().toBeNever();
 	});
 });
 
-describe("enum validation", () => {
-	it.each(["active", "inactive", ""])("accepts the value %j", (input) => {
+describe("literal enum compatibility", () => {
+	it("accepts raw literals and matching values from other definitions", () => {
 		// Arrange
 		expect.hasAssertions();
+		const status = defineEnum({ Enabled: "enabled", Disabled: 0 });
+		const otherStatus = defineEnum({ Enabled: "enabled" });
+		type Status = EnumValue<typeof status>;
 
 		// Act
-		const result = isEnum(status, input);
+		const raw: Status = "enabled";
+		const other: Status = otherStatus.Enabled;
 
 		// Assert
-		expect(result).toBe(true);
+		expect(raw).toBe(status.Enabled);
+		expect(other).toBe(status.Enabled);
+		expectTypeOf<"missing">().not.toExtend<Status>();
+		expectTypeOf<1>().not.toExtend<Status>();
 	});
 
-	it.each(invalidInputs)("rejects invalid input %j", (input) => {
+	it("supports exhaustive switches using named members", () => {
 		// Arrange
 		expect.hasAssertions();
+		const status = defineEnum({ Enabled: "enabled", Disabled: 0 });
+		function label(value: EnumValue<typeof status>): string {
+			switch (value) {
+				case status.Enabled: {
+					return "On";
+				}
+				case status.Disabled: {
+					return "Off";
+				}
+				default: {
+					return assertNever(value);
+				}
+			}
+		}
 
 		// Act
-		const result = isEnum(status, input);
+		const enabled = label(status.Enabled);
+		const disabled = label(status.Disabled);
 
 		// Assert
-		expect(result).toBe(false);
+		expect(enabled).toBe("On");
+		expect(disabled).toBe("Off");
 	});
 
-	it("accepts duplicate values", () => {
+	it("supports exhaustive value-keyed mappings", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum(statusBrand, { First: "same", Second: "same" });
+		const status = defineEnum({ Enabled: "enabled", Disabled: 0 });
+		type Status = EnumValue<typeof status>;
 
 		// Act
-		const result = isEnum(values, "same");
+		const labels = { enabled: "On", 0: "Off" } satisfies Record<Status, string>;
+		// @ts-expect-error An exhaustive mapping must include the disabled member.
+		const incomplete = { enabled: "On" } satisfies Record<Status, string>;
 
 		// Assert
-		expect(result).toBe(true);
+		expect(labels[status.Enabled]).toBe("On");
+		expect(labels[status.Disabled]).toBe("Off");
+		expect(incomplete).not.toHaveProperty("0");
 	});
 });
 
-describe("enum parsing", () => {
-	it.each(["active", "inactive", ""])("returns %j without creating an error", (input) => {
+describe("enum discriminants and input types", () => {
+	it("narrows containing unions through named member comparisons", () => {
 		// Arrange
 		expect.hasAssertions();
-		const createError = vi.fn<(input: unknown) => Error>(() => new Error("Invalid status"));
+		const status = defineEnum({ Enabled: "enabled", Disabled: 0 });
+		type State =
+			| { status: typeof status.Enabled; user: string }
+			| { status: typeof status.Disabled; reason: string };
+		function describeState(state: State): string {
+			if (state.status === status.Enabled) {
+				return state.user;
+			}
+			return state.reason;
+		}
 
 		// Act
-		const result = parseEnum(status, input, createError);
+		const enabled = describeState({ status: status.Enabled, user: "Alice" });
+		const disabled = describeState({ status: status.Disabled, reason: "Paused" });
 
 		// Assert
-		expect(result).toBe(input);
-		expectTypeOf(result).toEqualTypeOf<Status>();
-		expect(createError).not.toHaveBeenCalled();
+		expect(enabled).toBe("Alice");
+		expect(disabled).toBe("Paused");
 	});
 
-	it.each(invalidInputs)("throws the supplied error for invalid input %j", (input) => {
+	it("preserves union-valued members without branding or initializer validation", () => {
 		// Arrange
 		expect.hasAssertions();
-		const error = new TypeError("Invalid status");
-		const createError = vi.fn<(input: unknown) => Error>(() => error);
+		const members: { State: "enabled" | 0 } = { State: "enabled" };
 
 		// Act
-		function parse(): Status {
-			return parseEnum(status, input, createError);
+		const values = defineEnum(members);
+
+		// Assert
+		expect(values.State).toBe("enabled");
+		expectTypeOf<EnumValue<typeof values>>().toEqualTypeOf<"enabled" | 0>();
+	});
+
+	it("rejects non-string and non-number members at compile time", () => {
+		// Arrange
+		expect.hasAssertions();
+		const token = Symbol("token");
+
+		// Act
+		function rejectMembers(input: { Unknown: unknown; Optional?: string }): void {
+			// @ts-expect-error Boolean members are not string or number values.
+			defineEnum({ Enabled: true });
+			// @ts-expect-error Bigint members are not string or number values.
+			defineEnum({ Count: 1n });
+			// @ts-expect-error Symbol members are not string or number values.
+			defineEnum({ Token: token });
+			// @ts-expect-error Object members are not string or number values.
+			defineEnum({ Config: {} });
+			// @ts-expect-error Array members are not string or number values.
+			defineEnum({ Items: [] });
+			// @ts-expect-error Undefined members are not string or number values.
+			defineEnum({ Missing: undefined });
+			// @ts-expect-error Null members are not string or number values.
+			defineEnum({ Empty: null }); // oxlint-disable-line unicorn/no-null -- Exercise rejection of null members.
+			// @ts-expect-error Unknown members cannot establish the value constraint.
+			defineEnum({ Unknown: input.Unknown });
+			// @ts-expect-error Optional member access can produce undefined.
+			defineEnum({ Optional: input.Optional });
 		}
 
 		// Assert
-		expect(parse).toThrow(error);
-		expect(createError).toHaveBeenCalledExactlyOnceWith(input);
-	});
-
-	it("rejects input for an empty enum", () => {
-		// Arrange
-		expect.hasAssertions();
-		const createError = vi.fn<(input: unknown) => Error>(() => new Error("Empty enum"));
-		const values = defineEnum(statusBrand, {});
-
-		// Act
-		function parse(): never {
-			return parseEnum(values, "", createError);
-		}
-
-		// Assert
-		expect(parse).toThrow("Empty enum");
-		expect(createError).toHaveBeenCalledExactlyOnceWith("");
+		expect(rejectMembers).toBeTypeOf("function");
 	});
 });

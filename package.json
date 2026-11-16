@@ -22,7 +22,6 @@
     "check:duplicates": "jscpd --fail-on-empty --no-tips",
     "check:unused": "knip",
     "example:explicit-state": "node packages/utils/examples/explicit-state.ts",
-    "example:enum": "node packages/utils/examples/enum.ts",
     "format": "dprint fmt",
     "format:check": "dprint check",
     "lint": "oxlint --config oxlint.config.ts .",
