@@ -2,6 +2,35 @@
 
 TypeScripts utilities and lint rules shared across projects.
 
+## Project Structure
+
+Here is an overview of the project:
+
+```
+coverage/
+.githooks/
+node_modules/
+packages/
+  rules/
+  utils/
+scripts/
+test/
+.gitattributes
+.gitignore
+.jscpd.json
+AGENTS.md
+dprint.json
+knip.json
+LICENSE
+oxlint.config.ts
+package.json
+package-lock.json
+README.md
+tsconfig.json
+vite.config.ts
+vitest.config.ts
+```
+
 ## Commits & Pull Requests
 
 - Follow the Conventional Commits specification for commit messages.
