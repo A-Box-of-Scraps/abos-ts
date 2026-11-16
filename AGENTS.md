@@ -30,6 +30,9 @@ tsconfig.json
 vite.config.ts
 vitest.config.ts
 ```
+## Development
+
+- You must write tests that are easy to scan and understand with clear `Arrange / Act / Assert` sections.
 
 ## Commits & Pull Requests
 
