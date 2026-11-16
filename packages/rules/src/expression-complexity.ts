@@ -1,12 +1,10 @@
+import { FIRST_OPTION, NODE_TYPE } from "#src/constants";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
 const DEFAULT_MAX = 3;
-const FIRST_OPTION = 0;
 const NO_OPERATORS = 0;
 const ONE_OPERATOR = 1;
-const LOGICAL_EXPRESSION = "LogicalExpression";
-const UNARY_EXPRESSION = "UnaryExpression";
 const NOT_OPERATOR = "!";
 const transparentWrappers = new Set([
 	"TSAsExpression",
@@ -52,11 +50,11 @@ export const expressionComplexity: Rule.RuleModule = {
 				while (
 					parent !== null
 					&& (transparentWrappers.has(parent.type)
-						|| (parent.type === UNARY_EXPRESSION && parent.operator === NOT_OPERATOR))
+						|| (parent.type === NODE_TYPE.UnaryExpression && parent.operator === NOT_OPERATOR))
 				) {
 					({ parent } = parent);
 				}
-				if (parent?.type === LOGICAL_EXPRESSION) {
+				if (parent?.type === NODE_TYPE.LogicalExpression) {
 					counts.set(parent, (counts.get(parent) ?? NO_OPERATORS) + count);
 				} else if (count > max) {
 					context.report({ node, messageId: "tooComplex", data: { count, max } });

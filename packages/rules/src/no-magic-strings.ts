@@ -1,16 +1,8 @@
+import { EMPTY_EXPRESSIONS, FIRST_QUASI, NODE_TYPE } from "#src/constants";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
-const EMPTY_EXPRESSIONS = 0;
-const FIRST_QUASI = 0;
 const TYPEOF_OPERATOR = "typeof";
-
-const NODE_TYPE = {
-	Literal: "Literal",
-	TemplateLiteral: "TemplateLiteral",
-	UnaryExpression: "UnaryExpression",
-	SwitchStatement: "SwitchStatement",
-} as const;
 
 const comparisonOperators = new Set(["===", "!==", "==", "!=", "<", "<=", ">", ">="]);
 const typeofResults = new Set([

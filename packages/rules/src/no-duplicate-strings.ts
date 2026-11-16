@@ -1,11 +1,9 @@
+import { EMPTY_EXPRESSIONS, FIRST_OPTION, FIRST_QUASI } from "#src/constants";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
 const DEFAULT_THRESHOLD = 3;
 const DEFAULT_SHORT_STRING = 10;
-const FIRST_OPTION = 0;
-const FIRST_QUASI = 0;
-const EMPTY_EXPRESSIONS = 0;
 
 interface Options {
 	threshold?: number;
