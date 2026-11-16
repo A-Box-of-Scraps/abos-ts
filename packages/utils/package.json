@@ -2,7 +2,11 @@
   "name": "@pi-pack/ts-utils",
   "version": "0.2.0",
   "description": "A Box of Scraps's TypeScript utilities.",
-  "keywords": ["utils", "result", "enum"],
+  "keywords": [
+    "utils",
+    "result",
+    "enum"
+  ],
   "homepage": "https://github.com/A-Box-of-Scraps/abos-ts#readme",
   "bugs": {
     "url": "https://github.com/A-Box-of-Scraps/abos-ts/issues"
@@ -21,7 +25,10 @@
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
-  "files": ["CHANGELOG.md", "dist"],
+  "files": [
+    "CHANGELOG.md",
+    "dist"
+  ],
   "scripts": {
     "build": "node ../../scripts/build-package.ts",
     "prepack": "npm run build"
