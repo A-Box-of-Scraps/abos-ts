@@ -103,8 +103,11 @@ export default defineConfig({
 	},
 	overrides: [
 		{
-			files: ["packages/rules/src/**/*.ts"],
+			files: ["packages/rules/src/*.ts"],
+			jsPlugins: [{ name: "abos", specifier: "./packages/rules/src/index.ts" }],
 			rules: {
+				"abos/no-duplicate-strings": "error",
+				"abos/no-magic-strings": "error",
 				// Erase type-only imports entirely to avoid runtime dependencies in lint plugins.
 				"import/consistent-type-specifier-style": ["error", "prefer-top-level"],
 			},
