@@ -11,20 +11,22 @@ npm install @a-box-of-scraps/ts-utils
 The package ships compiled ESM and TypeScript declarations.
 
 ```ts
-import { defineEnum, type EnumMember, type EnumValue, isEnum, parseEnum } from "@a-box-of-scraps/ts-utils";
+import { defineEnum, type EnumValue, isEnum, parseEnum, reverseEnum } from "@a-box-of-scraps/ts-utils";
 ```
 
 ## Utilities
 
 This library provides the following utilities:
 
-### Branded Enum
+### Enum
 
-`defineEnum(brand, values)` creates a frozen object of branded string members. Declare the brand as a separate `const`
-symbol to keep enums with identical string values distinct at compile time. Members remain ordinary strings at runtime.
+`defineEnum(values)` creates a frozen, readonly object of named string or number values while preserving their literal
+types. Use its members at runtime and `EnumValue<typeof MyEnum>` to derive the union of allowed values.
 
-Use `EnumValue<typeof MyEnum>` to derive the member union, `isEnum` to validate and narrow unknown input, or `parseEnum`
-to return a valid member or throw an error from your supplied factory.
+`isEnum(values, input)` checks membership without coercion, returning a boolean rather than acting as a type guard. Use
+`parseEnum(values, input, createError?)` to validate unknown input and return its enum value type. Invalid input throws
+a `TypeError` by default; pass an error factory to customize the error. `reverseEnum(values, input)` returns the
+matching member name, or `undefined` if no value matches. For duplicate values, the last matching entry wins.
 
 ### Result
 
@@ -40,8 +42,8 @@ error containing the unexpected value.
 
 ## Examples
 
-- [Enum](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/examples/enum.ts): Define distinct branded
-  enums, validate external input, and parse values with custom errors.
+- [Enum](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/examples/enum.ts): Define job priorities,
+  validate unknown API input before enqueueing jobs, look up member names, and customize validation errors.
 - [Explicit State](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/examples/explicit-state.ts):
   Model job transitions with literal enum companion objects, return successes or failures with `Result`, and enforce
   exhaustive state handling with `assertNever`.
