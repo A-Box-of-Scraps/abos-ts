@@ -22,7 +22,7 @@ describe("enum definition", () => {
 	it("prevents changing, adding, and deleting members through either reference", () => {
 		// Arrange
 		expect.hasAssertions();
-		const members = { Enabled: "enabled", Disabled: 0 };
+		const members = { Enabled: "enabled", Disabled: 0 } as const;
 		const status = defineEnum(members);
 
 		// Act
@@ -50,18 +50,41 @@ describe("enum definition", () => {
 		expectTypeOf<EnumValue<typeof status>>().toEqualTypeOf<"enabled" | 0>();
 	});
 
-	it("preserves widened types rather than imposing native enum initializer restrictions", () => {
+	it("preserves widened numbers alongside string literals", () => {
 		// Arrange
 		expect.hasAssertions();
-		const members = { Name: "name", Count: Number("1") };
+		const members = { Name: "name", Count: Number("1") } as const;
 
 		// Act
 		const values = defineEnum(members);
 
 		// Assert
 		expect(values).toBe(members);
-		expectTypeOf(values).toEqualTypeOf<{ readonly Name: string; readonly Count: number }>();
-		expectTypeOf<EnumValue<typeof values>>().toEqualTypeOf<string | number>();
+		expectTypeOf(values).toEqualTypeOf<{ readonly Name: "name"; readonly Count: number }>();
+		expectTypeOf<EnumValue<typeof values>>().toEqualTypeOf<"name" | number>();
+	});
+
+	it("rejects widened string members at compile time", () => {
+		// Arrange
+		expect.hasAssertions();
+		const members = { Name: "name" };
+
+		// Act
+		function rejectMembers(text: string, mixed: string | number, union: { Name: string } | { Count: 0 }): void {
+			// @ts-expect-error Mutable object properties infer widened strings.
+			defineEnum(members);
+			// @ts-expect-error Widened strings do not describe literal enum members.
+			defineEnum({ Name: text });
+			// @ts-expect-error A mixed member must not include widened strings.
+			defineEnum({ Value: mixed });
+			// @ts-expect-error Every branch must exclude widened string members.
+			defineEnum(union);
+			// @ts-expect-error Explicit type arguments must not bypass the restriction.
+			defineEnum<{ Name: string }>({ Name: "name" });
+		}
+
+		// Assert
+		expect(rejectMembers).toBeTypeOf("function");
 	});
 
 	it("supports empty definitions", () => {

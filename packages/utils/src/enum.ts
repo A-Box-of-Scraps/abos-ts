@@ -6,14 +6,13 @@ type EnumValue<Values extends EnumDefinition> = Values extends unknown ? Values[
 
 type EnumName<Values> = Values extends unknown ? `${Extract<keyof Values, EnumPrimitive>}` : never;
 
-function defineEnum<const Values extends EnumDefinition>(values: Values): Readonly<Values> {
+function defineEnum<const Values extends EnumDefinition>(
+	values: Values & (string extends EnumValue<Values> ? never : unknown),
+): Readonly<Values> {
 	return Object.freeze(values);
 }
 
-function isEnum<const Values extends EnumDefinition>(
-	values: Values,
-	input: unknown,
-): input is EnumValue<Values> {
+function isEnum(values: EnumDefinition, input: unknown): boolean {
 	return (typeof input === "string" || typeof input === "number") && Object.values(values).includes(input);
 }
 
@@ -35,7 +34,9 @@ function parseEnum<const Values extends EnumDefinition>(
 	createError: (input: unknown) => Error = (value) => new TypeError(`Invalid enum value: ${String(value)}`),
 ): EnumValue<Values> {
 	if (isEnum(values, input)) {
-		return input;
+		// Membership establishes the value type without narrowing callers of isEnum.
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+		return input as EnumValue<Values>;
 	}
 
 	throw createError(input);

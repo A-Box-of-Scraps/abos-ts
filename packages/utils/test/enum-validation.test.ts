@@ -25,7 +25,7 @@ const invalidInputs: unknown[] = [
 ];
 
 describe("enum membership", () => {
-	it.each(validInputs)("accepts and narrows member %#", (input) => {
+	it.each(validInputs)("accepts member %# without narrowing the input", (input) => {
 		// Arrange
 		expect.hasAssertions();
 
@@ -34,10 +34,31 @@ describe("enum membership", () => {
 
 		// Assert
 		expect(result).toBe(true);
+		expectTypeOf(result).toEqualTypeOf<boolean>();
 		if (!result) {
 			throw new Error("Expected a valid status");
 		}
-		expectTypeOf(input).toEqualTypeOf<Status>();
+		expectTypeOf(input).toEqualTypeOf<unknown>();
+	});
+
+	it("does not exclude strings when membership fails", () => {
+		// Arrange
+		expect.hasAssertions();
+		const values = { Name: "name" };
+		function check(input: string | number): string | number {
+			if (!isEnum(values, input)) {
+				expectTypeOf(input).toEqualTypeOf<string | number>();
+				return input;
+			}
+			expectTypeOf(input).toEqualTypeOf<string | number>();
+			return input;
+		}
+
+		// Act
+		const result = check("another");
+
+		// Assert
+		expect(result).toBe("another");
 	});
 
 	it.each(invalidInputs)("rejects non-member %#", (input) => {
@@ -65,7 +86,7 @@ describe("enum membership", () => {
 		if (!result) {
 			throw new Error("Expected a valid member");
 		}
-		expectTypeOf(input).toEqualTypeOf<"enabled">();
+		expectTypeOf(input).toEqualTypeOf<unknown>();
 	});
 
 	it.each(validInputs)("rejects input %# for an empty definition", (input) => {
