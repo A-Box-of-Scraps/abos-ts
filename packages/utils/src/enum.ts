@@ -7,7 +7,7 @@ type EnumMember<Value extends string, Brand extends symbol> = Value & {
 type EnumValue<Values> = Values[keyof Values];
 
 function defineEnum<const Brand extends symbol, const Values extends Record<string, string>>(
-	_brand: Brand,
+	_brand: Brand & (symbol extends Brand ? never : unknown),
 	values: Values,
 ): { readonly [Key in keyof Values]: EnumMember<Values[Key], Brand> } {
 	// Branding is type-only; the supplied strings remain unchanged at runtime.

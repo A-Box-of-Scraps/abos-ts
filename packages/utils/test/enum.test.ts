@@ -75,6 +75,20 @@ describe("enum definition", () => {
 		expectTypeOf<"active">().not.toExtend<Status>();
 	});
 
+	it("rejects brands without a unique symbol type", () => {
+		expect.hasAssertions();
+		// oxlint-disable-next-line typescript/no-inferrable-types -- Explicit widening exercises rejection of non-unique brands.
+		const widenedBrand: symbol = Symbol("Status");
+
+		// @ts-expect-error Inline symbols do not preserve a unique symbol type.
+		const inline = defineEnum(Symbol("Status"), { Active: "active" });
+		// @ts-expect-error Widened symbols cannot distinguish enum domains.
+		const widened = defineEnum(widenedBrand, { Active: "active" });
+
+		expect(inline.Active).toBe("active");
+		expect(widened.Active).toBe("active");
+	});
+
 	it("distinguishes identical literals with different brands", () => {
 		expect.hasAssertions();
 		const otherBrand = Symbol("OtherStatus");
