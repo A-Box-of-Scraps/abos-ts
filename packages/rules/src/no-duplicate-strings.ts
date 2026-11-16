@@ -39,7 +39,8 @@ export const noDuplicateStrings: Rule.RuleModule = {
 		const occurrences = new Map<string, Node[]>();
 
 		function collect(node: Node, value: string): void {
-			if (value.length < shortString || ignoredStrings.has(value)) {
+			const isExcluded = value.length < shortString || ignoredStrings.has(value);
+			if (isExcluded) {
 				return;
 			}
 			const nodes = occurrences.get(value);
@@ -59,7 +60,8 @@ export const noDuplicateStrings: Rule.RuleModule = {
 			TemplateLiteral(node) {
 				if (node.expressions.length === EMPTY_EXPRESSIONS) {
 					const value = node.quasis.at(FIRST_QUASI)?.value.cooked;
-					if (value !== undefined && value !== null) {
+					const hasCookedValue = value !== undefined && value !== null;
+					if (hasCookedValue) {
 						collect(node, value);
 					}
 				}

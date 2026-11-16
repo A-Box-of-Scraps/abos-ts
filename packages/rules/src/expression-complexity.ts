@@ -14,6 +14,12 @@ const transparentWrappers = new Set([
 	"ParenthesizedExpression",
 ]);
 
+// Negation and type wrappers do not split a logical expression into independent checks.
+function isTransparentWrapper(node: Rule.Node): boolean {
+	return transparentWrappers.has(node.type)
+		|| (node.type === NODE_TYPE.UnaryExpression && node.operator === NOT_OPERATOR);
+}
+
 interface Options {
 	max?: number;
 }
@@ -46,12 +52,10 @@ export const expressionComplexity: Rule.RuleModule = {
 			"LogicalExpression:exit"(node) {
 				const count = (counts.get(node) ?? NO_OPERATORS) + ONE_OPERATOR;
 				let parent: Rule.Node | null = node.parent;
-				// Negation and type wrappers do not split a logical expression into independent checks.
-				while (
-					parent !== null
-					&& (transparentWrappers.has(parent.type)
-						|| (parent.type === NODE_TYPE.UnaryExpression && parent.operator === NOT_OPERATOR))
-				) {
+				while (parent !== null) {
+					if (!isTransparentWrapper(parent)) {
+						break;
+					}
 					({ parent } = parent);
 				}
 				if (parent?.type === NODE_TYPE.LogicalExpression) {

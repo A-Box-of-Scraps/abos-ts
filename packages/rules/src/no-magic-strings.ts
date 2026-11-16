@@ -17,10 +17,13 @@ const typeofResults = new Set([
 ]);
 
 function getStaticString(node: Node): string | undefined {
-	if (node.type === NODE_TYPE.Literal && typeof node.value === "string") {
-		return node.value;
+	if (node.type === NODE_TYPE.Literal) {
+		if (typeof node.value === "string") {
+			return node.value;
+		}
 	}
-	if (node.type === NODE_TYPE.TemplateLiteral && node.expressions.length === EMPTY_EXPRESSIONS) {
+	const isStaticTemplate = node.type === NODE_TYPE.TemplateLiteral && node.expressions.length === EMPTY_EXPRESSIONS;
+	if (isStaticTemplate) {
 		return node.quasis.at(FIRST_QUASI)?.value.cooked ?? undefined;
 	}
 	return undefined;
@@ -44,10 +47,12 @@ export const noMagicStrings: Rule.RuleModule = {
 	create(context) {
 		function checkString(node: Node, comparedWith?: Node): void {
 			const value = getStaticString(node);
-			if (value === undefined || value.trim() === "") {
+			const isBlank = value === undefined || value.trim() === "";
+			if (isBlank) {
 				return;
 			}
-			if (isTypeofExpression(comparedWith) && typeofResults.has(value)) {
+			const isTypeofResult = isTypeofExpression(comparedWith) && typeofResults.has(value);
+			if (isTypeofResult) {
 				return;
 			}
 			context.report({ node, messageId: "magicString" });
@@ -64,8 +69,10 @@ export const noMagicStrings: Rule.RuleModule = {
 				checkString(node.discriminant);
 			},
 			SwitchCase(node) {
-				if (node.test && node.parent.type === NODE_TYPE.SwitchStatement) {
-					checkString(node.test, node.parent.discriminant);
+				const { test, parent } = node;
+				const isTestedSwitchCase = test !== null && test !== undefined && parent.type === NODE_TYPE.SwitchStatement;
+				if (isTestedSwitchCase) {
+					checkString(test, parent.discriminant);
 				}
 			},
 		};
