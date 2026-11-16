@@ -2,6 +2,18 @@
 
 A Box of Scraps's TypeScript utilities.
 
+## Installation
+
+```sh
+npm install @a-box-of-scraps/ts-utils
+```
+
+The package ships compiled ESM and TypeScript declarations.
+
+```ts
+import { defineEnum, type EnumMember, type EnumValue, isEnum, parseEnum } from "@a-box-of-scraps/ts-utils";
+```
+
 ## Utilities
 
 This library provides the following utilities:
