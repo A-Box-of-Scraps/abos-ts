@@ -28,7 +28,7 @@ describe("enum definition", () => {
 	it("returns a frozen copy without adding runtime properties", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = { Active: "active", Inactive: "inactive" };
+		const values = { Active: "active", Inactive: "inactive" } as const;
 
 		// Act
 		const result = defineEnum(statusBrand, values);
@@ -44,13 +44,14 @@ describe("enum definition", () => {
 	it("does not change when the original object is mutated", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values = { Active: "active" };
+		const values = { Active: "active" } as const;
 		const result = defineEnum(statusBrand, values);
 
 		// Act
-		values.Active = "changed";
+		const changed = Reflect.set(values, "Active", "changed");
 
 		// Assert
+		expect(changed).toBe(true);
 		expect(result.Active).toBe("active");
 		expect(isEnum(result, "active")).toBe(true);
 		expect(isEnum(result, "changed")).toBe(false);

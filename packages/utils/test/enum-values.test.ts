@@ -2,56 +2,28 @@
 /* oxlint-disable vitest/prefer-to-be-truthy, vitest/prefer-to-be-falsy */
 // Numeric literals exercise literal inference and membership without coercion.
 /* oxlint-disable no-magic-numbers */
-import { defineEnum, type EnumMember, type EnumValue, isEnum, parseEnum } from "#src/index";
+import { defineEnum, type EnumMember, type EnumValue, isEnum, parseEnum, reverseEnum } from "#src/index";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
 const valueBrand = Symbol("Values");
-const token = Symbol("token");
-const config = { retries: 3, timeout: 1000 };
-const items = [1, 2, 3];
-const date = new Date(0);
-
-function callback(): string {
-	return "result";
-}
-
 const values = defineEnum(valueBrand, {
 	Pending: 0,
 	Enabled: "enabled",
-	Active: true,
-	Inactive: false,
-	Big: 1n,
-	Token: token,
 	NotANumber: Number.NaN,
 	Infinity: Number.POSITIVE_INFINITY,
-	Config: config,
-	Values: items,
-	Callback: callback,
-	Date: date,
 });
 type Value = EnumValue<typeof values>;
 
-const validInputs: unknown[] = [
-	0,
-	"enabled",
-	true,
-	false,
-	1n,
-	token,
-	Number.NaN,
-	Number.POSITIVE_INFINITY,
-	config,
-	items,
-	callback,
-	date,
-];
+const validInputs: unknown[] = [0, "enabled", Number.NaN, Number.POSITIVE_INFINITY];
 const invalidInputs: unknown[] = [
 	// oxlint-disable-next-line unicorn/no-null -- Null must not match an enum member.
 	null,
 	undefined,
 	"Pending",
 	"0",
-	"true",
+	true,
+	false,
+	1n,
 	1,
 	0n,
 	Symbol("token"),
@@ -62,64 +34,48 @@ const invalidInputs: unknown[] = [
 ];
 
 describe("mixed enum definition", () => {
-	it("only freezes the container", () => {
-		// Arrange
-		expect.hasAssertions();
-		const members = { Config: { retries: 3 }, Values: [1, 2, 3], Callback: callback };
-
-		// Act
-		const result = defineEnum(valueBrand, members);
-
-		// Assert
-		expect(result).not.toBe(members);
-		expect(Object.isFrozen(result)).toBe(true);
-		expect(Object.isFrozen(result.Config)).toBe(false);
-		expect(Object.isFrozen(result.Values)).toBe(false);
-	});
-
-	it("preserves reference-valued members and callable functions", () => {
-		// Arrange
-		expect.hasAssertions();
-		const members = { Config: config, Values: items, Callback: callback };
-
-		// Act
-		const result = defineEnum(valueBrand, members);
-		const invoke = result.Callback;
-
-		// Assert
-		expect(result.Config).toBe(config);
-		expect(result.Values).toBe(items);
-		expect(invoke).toBe(callback);
-		expect(invoke()).toBe("result");
-		expectTypeOf(invoke).returns.toEqualTypeOf<string>();
-	});
-
-	it("infers branded literals, nested objects, and readonly tuples", () => {
+	it("infers readonly branded string and number literals", () => {
 		// Arrange
 		expect.hasAssertions();
 
 		// Act
-		const result = defineEnum(valueBrand, {
-			Pending: 0,
-			Enabled: "enabled",
-			Active: true,
-			Big: 1n,
-			Token: token,
-			Config: { retries: 3, timeout: 1000 },
-			Values: [1, 2, 3],
-		});
+		const result = defineEnum(valueBrand, { Pending: 0, Enabled: "enabled" });
 
 		// Assert
-		expect(result.Pending).toBe(0);
+		expect(result).toStrictEqual({ Pending: 0, Enabled: "enabled" });
 		expectTypeOf(result).toEqualTypeOf<{
 			readonly Pending: EnumMember<0, typeof valueBrand>;
 			readonly Enabled: EnumMember<"enabled", typeof valueBrand>;
-			readonly Active: EnumMember<true, typeof valueBrand>;
-			readonly Big: EnumMember<1n, typeof valueBrand>;
-			readonly Token: EnumMember<typeof token, typeof valueBrand>;
-			readonly Config: EnumMember<{ readonly retries: 3; readonly timeout: 1000 }, typeof valueBrand>;
-			readonly Values: EnumMember<readonly [1, 2, 3], typeof valueBrand>;
 		}>();
+	});
+
+	it("rejects members other than strings and numbers", () => {
+		// Arrange
+		expect.hasAssertions();
+		const brand = Symbol("RejectedValues");
+
+		// Act
+		function rejectMembers(input: { Mixed: string | boolean }): void {
+			// @ts-expect-error Boolean members are not supported.
+			defineEnum(brand, { Active: true });
+			// @ts-expect-error Bigint members are not supported.
+			defineEnum(brand, { Big: 1n });
+			// @ts-expect-error Symbol members are not supported.
+			defineEnum(brand, { Token: Symbol("token") });
+			// @ts-expect-error Object members are not supported.
+			defineEnum(brand, { Config: { retries: 3 } });
+			// @ts-expect-error Array members are not supported.
+			defineEnum(brand, { Values: [1, 2, 3] });
+			// @ts-expect-error Function members are not supported.
+			defineEnum(brand, { Callback: (): string => "result" });
+			// @ts-expect-error Date members are not supported.
+			defineEnum(brand, { Date: new Date(0) });
+			// @ts-expect-error Every branch of a member union must be a string or number.
+			defineEnum(brand, { Mixed: input.Mixed });
+		}
+
+		// Assert
+		expect(rejectMembers).toBeTypeOf("function");
 	});
 
 	it("rejects nullish and broad member types", () => {
@@ -136,13 +92,13 @@ describe("mixed enum definition", () => {
 			Any: any;
 			Optional?: number;
 		}): void {
-			// @ts-expect-error Null cannot carry a brand.
+			// @ts-expect-error Null is not a string or number.
 			defineEnum(brand, { Null: null }); // oxlint-disable-line unicorn/no-null -- Exercise rejection of null members.
-			// @ts-expect-error Undefined cannot carry a brand.
+			// @ts-expect-error Undefined is not a string or number.
 			defineEnum(brand, { Undefined: undefined });
-			// @ts-expect-error Nullable unions cannot carry a brand in every branch.
+			// @ts-expect-error Nullable unions include an unsupported member type.
 			defineEnum(brand, { Nullable: input.Nullable });
-			// @ts-expect-error Unions with undefined cannot carry a brand in every branch.
+			// @ts-expect-error Unions with undefined include an unsupported member type.
 			defineEnum(brand, { Undefined: input.Undefined });
 			// @ts-expect-error Unknown members would erase the enum's type safety.
 			defineEnum(brand, { Unknown: input.Unknown });
@@ -162,6 +118,169 @@ describe("mixed enum definition", () => {
 	});
 });
 
+describe("enum member names", () => {
+	it("rejects symbol keys, including when mixed with string keys", () => {
+		// Arrange
+		expect.hasAssertions();
+		const key = Symbol("Key");
+
+		// Act
+		function rejectKeys(): void {
+			// @ts-expect-error Symbol keys are not enumerated by the membership check.
+			defineEnum(valueBrand, { [key]: 42 });
+			// @ts-expect-error A string key must not hide an unsupported symbol key.
+			defineEnum(valueBrand, { Name: "hello", [key]: 42 });
+			const members = { [key]: 42 };
+			// @ts-expect-error Predeclared objects must also reject symbol keys.
+			defineEnum(valueBrand, members);
+		}
+
+		// Assert
+		expect(rejectKeys).toBeTypeOf("function");
+	});
+
+	it("rejects numeric names and names that are not statically known", () => {
+		// Arrange
+		expect.hasAssertions();
+		const brand = Symbol("InvalidNames");
+
+		// Act
+		function rejectKeys(input: Record<string, number>): void {
+			// @ts-expect-error Native enums cannot have numeric member names.
+			defineEnum(brand, { 0: 42 });
+			// @ts-expect-error Quoting a canonical numeric name does not make it valid.
+			defineEnum(brand, { "0": 42 });
+			// @ts-expect-error Negative numeric names are also invalid.
+			defineEnum(brand, { "-1": 42 });
+			// @ts-expect-error Fractional numeric names are also invalid.
+			defineEnum(brand, { "1.5": 42 });
+			// @ts-expect-error Native enums require statically known member names.
+			defineEnum(brand, input);
+		}
+
+		// Assert
+		expect(rejectKeys).toBeTypeOf("function");
+	});
+
+	it("accepts noncanonical numeric spellings as string names", () => {
+		// Arrange
+		expect.hasAssertions();
+		const members = { "01": 1, "1.0": 2, "1e3": 3, "-0": 4, "": 5, NaN: 6, Infinity: 7 } as const;
+
+		// Act
+		const result = defineEnum(valueBrand, members);
+
+		// Assert
+		expect(result).toStrictEqual(members);
+		expect(isEnum(result, 1)).toBe(true);
+		expect(isEnum(result, "01")).toBe(false);
+	});
+});
+
+describe("enum member initializers", () => {
+	it("rejects broad string members and unions containing string", () => {
+		// Arrange
+		expect.hasAssertions();
+		const brand = Symbol("BroadStrings");
+
+		// Act
+		function rejectMembers(input: { Name: string; Count: number; Mixed: string | number }): void {
+			// @ts-expect-error A broad string is not a constant string member.
+			defineEnum(brand, { Name: input.Name });
+			// @ts-expect-error Numeric members must not hide a broad string member.
+			defineEnum(brand, { Name: input.Name, Count: input.Count });
+			// @ts-expect-error A union containing broad string is also unsupported.
+			defineEnum(brand, { Mixed: input.Mixed });
+			const members = { Name: "hello" };
+			// @ts-expect-error Mutable object properties widen to string unless explicitly narrowed.
+			defineEnum(brand, members);
+		}
+
+		// Assert
+		expect(rejectMembers).toBeTypeOf("function");
+	});
+
+	it("rejects string unions and mixed string/number unions", () => {
+		// Arrange
+		expect.hasAssertions();
+		const brand = Symbol("StringUnions");
+
+		// Act
+		function rejectMembers(input: { Text: "a" | "b"; Mixed: "a" | 1; Nullable: "a" | undefined }): void {
+			// @ts-expect-error A string union does not identify a single constant member.
+			defineEnum(brand, { Name: input.Text });
+			// @ts-expect-error Adding a numeric branch does not make a string initializer constant.
+			defineEnum(brand, { Name: input.Mixed });
+			// @ts-expect-error Removing undefined must not make a nullable initializer valid.
+			defineEnum(brand, { Name: input.Nullable });
+		}
+
+		// Assert
+		expect(rejectMembers).toBeTypeOf("function");
+	});
+
+	it("accepts broad numeric members alongside string literals", () => {
+		// Arrange
+		expect.hasAssertions();
+		const count = Number("42");
+
+		// Act
+		const result = defineEnum(valueBrand, { Name: "hello", Count: count });
+
+		// Assert
+		expectTypeOf(result).toEqualTypeOf<{
+			readonly Name: EnumMember<"hello", typeof valueBrand>;
+			readonly Count: EnumMember<number, typeof valueBrand>;
+		}>();
+		expect(isEnum(result, 42)).toBe(true);
+		expect(isEnum(result, 43)).toBe(false);
+		expect(isEnum(result, "42")).toBe(false);
+	});
+
+	it("accepts numeric unions as computed numeric members", () => {
+		// Arrange
+		expect.hasAssertions();
+		const brand = Symbol("NumericUnion");
+		function defineCount(count: 1 | 2): { readonly Count: EnumMember<1 | 2, typeof brand> } {
+			return defineEnum(brand, { Count: count });
+		}
+
+		// Act
+		const result = defineCount(1);
+
+		// Assert
+		expect(result.Count).toBe(1);
+		expect(isEnum(result, 1)).toBe(true);
+		expect(isEnum(result, 2)).toBe(false);
+	});
+});
+
+describe("computed enum members", () => {
+	it("supports bit flags while validating only declared values", () => {
+		// Arrange
+		expect.hasAssertions();
+		const read = 1 << 0;
+		const write = 1 << 1;
+		const execute = 1 << 2;
+
+		// Act
+		const permission = defineEnum(valueBrand, {
+			None: 0,
+			Read: read,
+			Write: write,
+			Execute: execute,
+			All: read | write | execute,
+		});
+
+		// Assert
+		expect(permission).toStrictEqual({ None: 0, Read: 1, Write: 2, Execute: 4, All: 7 });
+		expectTypeOf(permission.Read).toEqualTypeOf<EnumMember<number, typeof valueBrand>>();
+		expect(isEnum(permission, read | write | execute)).toBe(true);
+		expect(isEnum(permission, read | write)).toBe(false);
+		expect(reverseEnum(permission, permission.All)).toBe("All");
+	});
+});
+
 describe("mixed enum branding", () => {
 	it("keeps branded primitive members inhabitable", () => {
 		// Arrange
@@ -173,24 +292,15 @@ describe("mixed enum branding", () => {
 		// Assert
 		expect(values.Pending).toBe(0);
 		expectTypeOf<Extract<Member, number>>().not.toBeNever();
-		expectTypeOf<Extract<Member, boolean>>().not.toBeNever();
-		expectTypeOf<Extract<Member, bigint>>().not.toBeNever();
-		expectTypeOf<Extract<Member, symbol>>().not.toBeNever();
+		expectTypeOf<Extract<Member, string>>().not.toBeNever();
+		expectTypeOf<Member>().toExtend<string | number>();
 	});
 
 	it("rejects unbranded values and values from another enum", () => {
 		// Arrange
 		expect.hasAssertions();
 		const otherBrand = Symbol("OtherValues");
-		const members = {
-			Number: 0,
-			Boolean: true,
-			Big: 1n,
-			Token: token,
-			Config: config,
-			Values: items,
-			Callback: callback,
-		};
+		const members = { Number: 0, String: "enabled" } as const;
 
 		// Act
 		const first = defineEnum(valueBrand, members);
@@ -219,7 +329,7 @@ describe("mixed enum validation", () => {
 		expectTypeOf(input).toEqualTypeOf<Value>();
 	});
 
-	it.each(invalidInputs)("rejects non-member %# without coercion or structural matching", (input) => {
+	it.each(invalidInputs)("rejects non-member %# without coercion", (input) => {
 		// Arrange
 		expect.hasAssertions();
 
