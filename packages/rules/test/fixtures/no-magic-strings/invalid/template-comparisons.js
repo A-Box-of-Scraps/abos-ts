@@ -1,0 +1,19 @@
+status === `enabled`;
+`enabled` === status;
+status !== `enabled`;
+`enabled` !== status;
+status == `enabled`;
+`enabled` == status;
+status != `enabled`;
+`enabled` != status;
+status < `enabled`;
+`enabled` < status;
+status <= `enabled`;
+`enabled` <= status;
+status > `enabled`;
+`enabled` > status;
+status >= `enabled`;
+`enabled` >= status;
+
+"pending" === `enabled`;
+status === `\u0065nabled`;

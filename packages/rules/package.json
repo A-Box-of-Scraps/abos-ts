@@ -2,7 +2,10 @@
   "name": "@pi-pack/ts-rules",
   "version": "0.2.0",
   "description": "A Box of Scraps's TypeScript lint rules.",
-  "keywords": ["lint", "rules"],
+  "keywords": [
+    "lint",
+    "rules"
+  ],
   "homepage": "https://github.com/A-Box-of-Scraps/abos-ts#readme",
   "bugs": {
     "url": "https://github.com/A-Box-of-Scraps/abos-ts/issues"
@@ -15,16 +18,27 @@
   "author": "A Box of Scraps",
   "type": "module",
   "imports": {
-    "#src/*": "./src/*.ts"
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
   },
   "exports": {
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
-  "files": ["CHANGELOG.md", "dist"],
+  "files": [
+    "CHANGELOG.md",
+    "dist"
+  ],
   "scripts": {
     "build": "node ../../scripts/build-package.ts",
     "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@types/eslint": "^9.6.1"
+  },
+  "devDependencies": {
+    "@types/estree": "^1.0.10",
+    "eslint": "^10.15.0"
   },
   "publishConfig": {
     "access": "public"

@@ -95,13 +95,20 @@ export default defineConfig({
 	env: {
 		node: true,
 	},
-	ignorePatterns: ["**/dist/**", "**/coverage/**"],
+	ignorePatterns: ["**/dist/**", "**/coverage/**", "packages/rules/test/fixtures/**"],
 	options: {
 		typeAware: true,
 		denyWarnings: true,
 		reportUnusedDisableDirectives: "error",
 	},
 	overrides: [
+		{
+			files: ["packages/rules/src/**/*.ts"],
+			rules: {
+				// Erase type-only imports entirely to avoid runtime dependencies in lint plugins.
+				"import/consistent-type-specifier-style": ["error", "prefer-top-level"],
+			},
+		},
 		{
 			files: ["examples/**/*.ts", "packages/*/examples/**/*.ts"],
 			rules: {
