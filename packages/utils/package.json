@@ -1,0 +1,28 @@
+{
+  "name": "@pi-pack/ts-utils",
+  "version": "0.2.0",
+  "description": "A Box of Scraps's TypeScript utilities.",
+  "homepage": "https://github.com/A-Box-of-Scraps/abos-ts#readme",
+  "bugs": {
+    "url": "https://github.com/A-Box-of-Scraps/abos-ts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/A-Box-of-Scraps/abos-ts.git"
+  },
+  "license": "MIT",
+  "author": "A Box of Scraps",
+  "type": "module",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts",
+    "prepack": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
