@@ -5,13 +5,21 @@ A Box of Scraps's TypeScript utilities.
 ## Installation
 
 ```sh
-npm install @pi-pack/ts-utils
+npm install @a-box-of-scraps/ts-utils
 ```
 
 The package ships compiled ESM and TypeScript declarations.
 
 ```ts
-import { assertNever, defineEnum, type EnumValue, isEnum, parseEnum, Result, reverseEnum } from "@pi-pack/ts-utils";
+import {
+	assertNever,
+	defineEnum,
+	type EnumValue,
+	isEnum,
+	parseEnum,
+	Result,
+	reverseEnum,
+} from "@a-box-of-scraps/ts-utils";
 ```
 
 ## Utilities
@@ -25,7 +33,7 @@ keep distinct. Creating a symbol inside a factory gives each call a different ru
 give each call a different type.
 
 ```ts
-import { defineEnum, type EnumValue } from "@pi-pack/ts-utils";
+import { defineEnum, type EnumValue } from "@a-box-of-scraps/ts-utils";
 
 const protocolBrand = Symbol("Protocol");
 export const Protocol = defineEnum(protocolBrand).add("Http2", "h2");

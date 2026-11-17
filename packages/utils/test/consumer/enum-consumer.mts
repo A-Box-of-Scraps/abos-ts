@@ -1,4 +1,4 @@
-import { defineEnum } from "@pi-pack/ts-utils";
+import { defineEnum } from "@a-box-of-scraps/ts-utils";
 
 const brand = Symbol("Protocol");
 

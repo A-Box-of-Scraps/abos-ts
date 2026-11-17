@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll } from "vitest";
 
-const testHome = mkdtempSync(path.join(tmpdir(), "pi-pack-test-home-"));
+const testHome = mkdtempSync(path.join(tmpdir(), "abos-test-home-"));
 const environment = {
 	HOME: testHome,
 	USERPROFILE: testHome,

@@ -13,7 +13,7 @@ const rules = {
 };
 
 const plugin = {
-	meta: { name: "@pi-pack/ts-rules" },
+	meta: { name: "@a-box-of-scraps/ts-rules" },
 	rules,
 };
 
