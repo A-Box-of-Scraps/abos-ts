@@ -1,6 +1,10 @@
-# Utils
+# Rules
 
 A Box of Scraps's TypeScript lint rules.
+
+## Rules
+
+Browse the [rule reference](docs/README.md) for examples and configuration options.
 
 ## Changelog
 

@@ -27,7 +27,8 @@
   },
   "files": [
     "CHANGELOG.md",
-    "dist"
+    "dist",
+    "docs"
   ],
   "scripts": {
     "build": "node ../../scripts/build-package.ts",
