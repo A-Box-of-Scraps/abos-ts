@@ -1,20 +1,22 @@
-import { assertNever, defineEnum, type EnumValue, Result } from "#src/index";
+import { assertNever, Result, type ValueOf } from "#src/index";
 import assert from "node:assert/strict";
 
-// Each enum supplies branded runtime members; its matching type is their union.
-// Literal member values let TypeScript narrow exhaustive switches to never.
-const jobStateBrand = Symbol("JobState");
-const JobState = defineEnum(jobStateBrand)
-	.add("Queued", "queued")
-	.add("Running", "running")
-	.add("Completed", "completed");
-type JobState = EnumValue<typeof JobState>;
+const JobState = Object.freeze(
+	{
+		Queued: "queued",
+		Running: "running",
+		Completed: "completed",
+	} as const,
+);
+type JobState = ValueOf<typeof JobState>;
 
-const jobEventBrand = Symbol("JobEvent");
-const JobEvent = defineEnum(jobEventBrand)
-	.add("Start", "start")
-	.add("Complete", "complete");
-type JobEvent = EnumValue<typeof JobEvent>;
+const JobEvent = Object.freeze(
+	{
+		Start: "start",
+		Complete: "complete",
+	} as const,
+);
+type JobEvent = ValueOf<typeof JobEvent>;
 
 interface InvalidTransition {
 	readonly state: JobState;
@@ -23,20 +25,20 @@ interface InvalidTransition {
 
 // Rejected transitions are expected outcomes, not exceptions.
 function transition(state: JobState, event: JobEvent): Result<JobState, InvalidTransition> {
-	switch (state.value) {
-		case JobState.Queued.value: {
+	switch (state) {
+		case JobState.Queued: {
 			if (event === JobEvent.Start) {
 				return Result.ok(JobState.Running);
 			}
 			return Result.err({ state, event });
 		}
-		case JobState.Running.value: {
+		case JobState.Running: {
 			if (event === JobEvent.Complete) {
 				return Result.ok(JobState.Completed);
 			}
 			return Result.err({ state, event });
 		}
-		case JobState.Completed.value: {
+		case JobState.Completed: {
 			return Result.err({ state, event });
 		}
 		default: {
@@ -53,7 +55,7 @@ if (started.ok) {
 	const completed = transition(started.value, JobEvent.Complete);
 	assert.deepEqual(completed, Result.ok(JobState.Completed));
 } else {
-	assert.fail(`Unexpected rejection: ${started.error.state.value} + ${started.error.event.value}`);
+	assert.fail(`Unexpected rejection: ${started.error.state} + ${started.error.event}`);
 }
 
 const rejected = transition(JobState.Queued, JobEvent.Complete);

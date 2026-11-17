@@ -25,8 +25,7 @@
     },
     "packages/utils": {
       "entry": [
-        "examples/**/*.ts",
-        "test/consumer/enum-consumer.mts"
+        "examples/**/*.ts"
       ]
     }
   }

@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
-    "check": "npm run --silent build && npm run --silent test:declarations && npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
+    "check": "npm run --silent build && npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
     "check:duplicates": "jscpd --fail-on-empty --no-tips",
     "check:unused": "knip",
     "example:enum": "node packages/utils/examples/enum.ts",
@@ -32,7 +32,6 @@
     "lint:fix": "oxlint --config oxlint.config.ts --fix .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:declarations": "tsc --project packages/utils/test/consumer/tsconfig.declarations.json",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
