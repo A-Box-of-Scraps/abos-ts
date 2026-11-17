@@ -20,13 +20,20 @@ This library provides the following utilities:
 
 ### Enum
 
-`defineEnum(values)` creates a frozen, readonly object of named string or number values while preserving their literal
-types. Use its members at runtime and `EnumValue<typeof MyEnum>` to derive the union of allowed values.
+`defineEnum(values)` freezes a plain object of named string or number literals while preserving readonly member types.
+Each member must have a single literal type: widened types, union-valued members, optional members, index signatures,
+and union-shaped definitions are rejected at compile time. Definitions must use enumerable, string-keyed data
+properties; accessors, hidden properties, symbol keys, and custom prototypes are rejected at runtime. Use members at
+runtime and `EnumValue<typeof MyEnum>` to derive their value union. Numeric combinations can be declared as literal
+members such as `All: 7`; collections of string members belong in a separate array.
 
-`isEnum(values, input)` checks membership without coercion, returning a boolean rather than acting as a type guard. Use
-`parseEnum(values, input, createError?)` to validate unknown input and return its enum value type. Invalid input throws
-a `TypeError` by default; pass an error factory to customize the error. `reverseEnum(values, input)` returns the
-matching member name, or `undefined` if no value matches. For duplicate values, the last matching entry wins.
+`isEnum(values, input)` accepts a `defineEnum` result and checks membership without coercion, narrowing matching input
+to the enum value union. `parseEnum(values, input, createError?)` returns a matching value or throws a `TypeError` by
+default; pass an error factory to customize the error. `reverseEnum(values, input)` returns the matching member name, or
+`undefined` if no value matches; the last matching entry wins for duplicate values. Parsing and reverse lookup also
+accept ordinary string/number maps. For reliable typing, define enums directly from complete object literals and use the
+original frozen result. Structurally narrowed definitions and extended spread copies can contain runtime members absent
+from the inferred value union, so the API does not guarantee type safety for those inputs.
 
 ### Result
 
@@ -43,7 +50,8 @@ error containing the unexpected value.
 ## Examples
 
 - [Enum](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/examples/enum.ts): Define job priorities,
-  validate unknown API input before enqueueing jobs, look up member names, and customize validation errors.
+  narrow and parse unknown input, look up member names, customize errors, and use numeric combinations and separate
+  collections of string members.
 - [Explicit State](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/examples/explicit-state.ts):
   Model job transitions with literal enum companion objects, return successes or failures with `Result`, and enforce
   exhaustive state handling with `assertNever`.

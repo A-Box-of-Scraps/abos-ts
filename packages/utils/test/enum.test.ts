@@ -2,6 +2,9 @@
 import { defineEnum, type EnumValue, isEnum, parseEnum, reverseEnum } from "#src/index";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
+type AcceptsDefinition<Values extends Record<string, string | number>> = [Values] extends
+	[Parameters<typeof defineEnum<Values>>[0]] ? true : false;
+
 describe("enum definitions", () => {
 	it("preserves literal members and the original object reference", () => {
 		// Arrange
@@ -15,7 +18,7 @@ describe("enum definitions", () => {
 		expect(states).toBe(values);
 		expect(states).toStrictEqual({ Ready: "ready", Pending: 0, Empty: "" });
 		expect(Object.isFrozen(states)).toBe(true);
-		expectTypeOf(states).toEqualTypeOf<Readonly<typeof values>>();
+		expectTypeOf<Pick<typeof states, keyof typeof values>>().toEqualTypeOf<Readonly<typeof values>>();
 		expectTypeOf<EnumValue<typeof states>>().toEqualTypeOf<"ready" | 0 | "">();
 	});
 
@@ -45,7 +48,9 @@ describe("enum definitions", () => {
 
 		// Assert
 		expect(states.Ready).toBe("ready");
-		expectTypeOf(states).toEqualTypeOf<{ readonly Ready: "ready"; readonly Pending: 0 }>();
+		expectTypeOf<Pick<typeof states, "Ready" | "Pending">>().toEqualTypeOf<
+			{ readonly Ready: "ready"; readonly Pending: 0 }
+		>();
 	});
 
 	it("supports empty definitions", () => {
@@ -60,29 +65,116 @@ describe("enum definitions", () => {
 		expect(Object.isFrozen(empty)).toBe(true);
 		expectTypeOf<EnumValue<typeof empty>>().toBeNever();
 	});
+});
 
-	it("rejects widened strings, including strings in one union branch", () => {
+describe("enum definition constraints", () => {
+	it("rejects widened and union member types", () => {
 		// Arrange
 		expect.hasAssertions();
 
 		// Act
-		type WidenedInput = Parameters<typeof defineEnum<{ Ready: string }>>[0];
-		type MixedInput = Parameters<typeof defineEnum<{ Ready: "ready"; Code: string | number }>>[0];
-		type UnionInput = Parameters<typeof defineEnum<{ Ready: "ready" } | { Other: string }>>[0];
+		type Numeric = AcceptsDefinition<{ Code: number }>;
+		type Text = AcceptsDefinition<{ Ready: string }>;
+		type Mixed = AcceptsDefinition<{ Code: string | number }>;
+		type NumericUnion = AcceptsDefinition<{ Code: 1 | 2 }>;
+		type StringUnion = AcceptsDefinition<{ Ready: "ready" | "pending" }>;
+		type MixedUnion = AcceptsDefinition<{ Code: "ready" | 1 }>;
 
 		// Assert
-		expectTypeOf<WidenedInput>().toBeNever();
-		expectTypeOf<MixedInput>().toBeNever();
-		expectTypeOf<UnionInput>().toBeNever();
+		expectTypeOf<[Numeric, Text, Mixed, NumericUnion, StringUnion, MixedUnion]>()
+			.toEqualTypeOf<[false, false, false, false, false, false]>();
 		expect(defineEnum).toBeTypeOf("function");
+	});
+
+	it("rejects definitions without a fixed set of literal members", () => {
+		// Arrange
+		expect.hasAssertions();
+
+		// Act
+		type Impossible = AcceptsDefinition<{ Code: never }>;
+		type Pattern = AcceptsDefinition<{ Code: `code-${number}` }>;
+		type Optional = AcceptsDefinition<{ Ready?: "ready" }>;
+		type StringIndex = AcceptsDefinition<Record<string, "ready">>;
+		type NumberIndex = AcceptsDefinition<Record<number, 1>>;
+		type UnionKeys = AcceptsDefinition<{ Ready: "ready" } | { Pending: 0 }>;
+		type UnionValues = AcceptsDefinition<{ Code: 1 } | { Code: 2 }>;
+
+		// Assert
+		expectTypeOf<[Impossible, Pattern, Optional, StringIndex, NumberIndex, UnionKeys, UnionValues]>()
+			.toEqualTypeOf<[false, false, false, false, false, false, false]>();
+		expect(defineEnum).toBeTypeOf("function");
+	});
+
+	it("rejects inferred widened numbers and union values at call sites", () => {
+		// Arrange
+		expect.hasAssertions();
+		const widened: { Code: number } = { Code: 1 };
+		const union: { Code: 1 | 2 } = { Code: 1 };
+
+		// Act
+		// @ts-expect-error Widened numbers cannot describe enum membership.
+		const widenedResult = defineEnum(widened);
+		// @ts-expect-error A union member promises values absent from the definition.
+		const unionResult = defineEnum(union);
+		// @ts-expect-error Bitwise expressions infer number rather than a single literal.
+		const computedResult = defineEnum({ All: 1 | 2 | 4 });
+
+		// Assert
+		expect(widenedResult).toBe(widened);
+		expect(unionResult).toBe(union);
+		expect(computedResult.All).toBe(7);
+	});
+
+	it.each<{ values: { Ready: "ready" } | { Pending: 0 } }>([
+		{ values: { Ready: "ready" } },
+		{ values: { Pending: 0 } },
+	])("rejects inferred union-shaped definitions at call sites: $values", ({ values }) => {
+		// Arrange
+		expect.hasAssertions();
+
+		// Act
+		// @ts-expect-error Only one union branch exists at runtime.
+		const result = defineEnum(values);
+
+		// Assert
+		expect(result).toBe(values);
+	});
+
+	it("supports explicitly declared flag combinations", () => {
+		// Arrange
+		expect.hasAssertions();
+		const levels = defineEnum({ Info: 1, Warning: 2, Error: 4, All: 7 });
+
+		// Act
+		const all = isEnum(levels, 7);
+		const undeclaredCombination = isEnum(levels, 3);
+
+		// Assert
+		expect(all).toBe(true);
+		expect(undeclaredCombination).toBe(false);
+		expectTypeOf<EnumValue<typeof levels>>().toEqualTypeOf<1 | 2 | 4 | 7>();
+	});
+
+	it("keeps collections of string members separate from the enum", () => {
+		// Arrange
+		expect.hasAssertions();
+		const levels = defineEnum({ Info: "info", Warning: "warn", Error: "error" });
+
+		// Act
+		const allLevels = [levels.Info, levels.Warning, levels.Error] as const;
+
+		// Assert
+		expect(allLevels).toStrictEqual(["info", "warn", "error"]);
+		expect(isEnum(levels, allLevels)).toBe(false);
+		expectTypeOf<EnumValue<typeof levels>>().toEqualTypeOf<"info" | "warn" | "error">();
 	});
 });
 
 describe("enum membership", () => {
-	it.each(["ready", "", 0, 1, Number.NaN, Number.POSITIVE_INFINITY])("accepts member %s", (input) => {
+	it.each(["ready", "", 0, 1])("accepts member %s", (input) => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum({ Ready: "ready", Empty: "", Zero: 0, One: 1, NaN: Number.NaN, Infinity });
+		const values = defineEnum({ Ready: "ready", Empty: "", Zero: 0, One: 1 });
 
 		// Act
 		const result = isEnum(values, input);
@@ -106,17 +198,18 @@ describe("enum membership", () => {
 			expect(result).toBe(false);
 		},
 	);
+});
 
-	it("does not narrow unknown input to a widened numeric member type", () => {
+describe("enum type guards", () => {
+	it("narrows unknown input to the enum value union", () => {
 		// Arrange
 		expect.hasAssertions();
-		const values: { Code: number } = { Code: 1 };
-		const codes = defineEnum(values);
+		const states = defineEnum({ Ready: "ready", Pending: 0 });
 
 		// Act
 		function check(input: unknown): boolean {
-			if (isEnum(codes, input)) {
-				expectTypeOf(input).toBeUnknown();
+			if (isEnum(states, input)) {
+				expectTypeOf(input).toEqualTypeOf<"ready" | 0>();
 				return true;
 			}
 			expectTypeOf(input).toBeUnknown();
@@ -124,9 +217,116 @@ describe("enum membership", () => {
 		}
 
 		// Assert
+		expect(check("ready")).toBe(true);
+		expect(check(0)).toBe(true);
+		expect(check(2)).toBe(false);
+	});
+
+	it("excludes only declared members in the false branch", () => {
+		// Arrange
+		expect.hasAssertions();
+		const codes = defineEnum({ One: 1 });
+
+		// Act
+		function check(input: 1 | 2 | "other"): boolean {
+			if (isEnum(codes, input)) {
+				expectTypeOf(input).toEqualTypeOf<1>();
+				return true;
+			}
+			expectTypeOf(input).toEqualTypeOf<2 | "other">();
+			return false;
+		}
+
+		// Assert
 		expect(check(1)).toBe(true);
 		expect(check(2)).toBe(false);
-		expectTypeOf<EnumValue<typeof codes>>().toEqualTypeOf<number>();
+		expect(check("other")).toBe(false);
+	});
+
+	it("does not exclude all numbers when a numeric member is rejected", () => {
+		// Arrange
+		expect.hasAssertions();
+		const codes = defineEnum({ One: 1 });
+
+		// Act
+		function check(input: number | string): boolean {
+			if (isEnum(codes, input)) {
+				expectTypeOf(input).toEqualTypeOf<1>();
+				return true;
+			}
+			expectTypeOf(input).toEqualTypeOf<number | string>();
+			return false;
+		}
+
+		// Assert
+		expect(check(1)).toBe(true);
+		expect(check(2)).toBe(false);
+		expect(check("other")).toBe(false);
+	});
+
+	it("narrows filtered arrays", () => {
+		// Arrange
+		expect.hasAssertions();
+		const states = defineEnum({ Ready: "ready", Pending: 0 });
+		const inputs: unknown[] = ["ready", 0, "other", 1];
+
+		// Act
+		const members = inputs.filter((input) => isEnum(states, input));
+
+		// Assert
+		expect(members).toStrictEqual(["ready", 0]);
+		expectTypeOf(members).toEqualTypeOf<("ready" | 0)[]>();
+	});
+});
+
+describe("enum guard constraints", () => {
+	it("requires a definition checked by defineEnum", () => {
+		// Arrange
+		expect.hasAssertions();
+
+		// Act
+		type GuardInput = Parameters<typeof isEnum<{ Ready: "ready" }>>[0];
+		type PlainDefinitionAccepted = { readonly Ready: "ready" } extends GuardInput ? true : false;
+
+		// Assert
+		expectTypeOf<PlainDefinitionAccepted>().toEqualTypeOf<false>();
+		expect(isEnum).toBeTypeOf("function");
+	});
+
+	it("prevents widening or combining checked definitions", () => {
+		// Arrange
+		expect.hasAssertions();
+		const first = defineEnum({ Code: 1 });
+		const second = defineEnum({ Code: 2 });
+
+		// Act
+		type WidenedInput = Parameters<typeof isEnum<{ Code: number }>>[0];
+		type UnionInput = Parameters<typeof isEnum<{ Code: 1 } | { Code: 2 }>>[0];
+		type WidenedAccepted = typeof first extends WidenedInput ? true : false;
+		type UnionAccepted = typeof first | typeof second extends UnionInput ? true : false;
+
+		// Assert
+		expectTypeOf<[WidenedAccepted, UnionAccepted]>().toEqualTypeOf<[false, false]>();
+		expect(first.Code).toBe(1);
+		expect(second.Code).toBe(2);
+	});
+
+	it.each([true, false])("rejects union-shaped checked enums at call sites: %s", (useFirst) => {
+		// Arrange
+		expect.hasAssertions();
+		const first = defineEnum({ Ready: "ready" });
+		const second = defineEnum({ Pending: 0 });
+		let states: typeof first | typeof second = first;
+		if (!useFirst) {
+			states = second;
+		}
+
+		// Act
+		// @ts-expect-error Combining definitions must not widen the guard's asserted type.
+		const result = isEnum(states, "ready");
+
+		// Assert
+		expect(result).toBe(useFirst);
 	});
 });
 
@@ -183,7 +383,7 @@ describe("enum parsing", () => {
 	it.each(["ready", "", 0, 1, Number.NaN, Number.POSITIVE_INFINITY])("preserves member %s", (input) => {
 		// Arrange
 		expect.hasAssertions();
-		const values = defineEnum({ Ready: "ready", Empty: "", Zero: 0, One: 1, NaN: Number.NaN, Infinity });
+		const values = { Ready: "ready", Empty: "", Zero: 0, One: 1, NaN: Number.NaN, Infinity };
 		const createError = vi.fn<(input: unknown) => Error>(() => new Error("Invalid"));
 
 		// Act
@@ -263,11 +463,12 @@ describe("enum parsing", () => {
 });
 
 describe("enum lookup edge cases", () => {
-	it.each([
-		{ first: Number.NaN, last: Number.NaN, input: Number.NaN },
-		{ first: 0, last: -0, input: 0 },
-		{ first: -0, last: 0, input: -0 },
-	])("uses matching membership and reverse lookup semantics for $input", ({ first, last, input }) => {
+	it.each(
+		[
+			{ first: 0, last: -0, input: 0 },
+			{ first: -0, last: 0, input: -0 },
+		] as const,
+	)("uses matching membership and reverse lookup semantics for $input", ({ first, last, input }) => {
 		// Arrange
 		expect.hasAssertions();
 		const values = defineEnum({ First: first, Last: last });
@@ -299,27 +500,103 @@ describe("enum lookup edge cases", () => {
 		expectTypeOf(name).toEqualTypeOf<undefined>();
 		expectTypeOf(parseEnum<typeof values>).returns.toBeNever();
 	});
+});
 
-	it.each(["inherited", "hidden", "symbol"])("ignores %s properties", (input) => {
+describe("enum runtime definition validation", () => {
+	it("rejects inherited definitions", () => {
+		// Arrange
+		expect.hasAssertions();
+		const values = { Own: "own" } as const;
+		Object.setPrototypeOf(values, { Inherited: "inherited" });
+
+		// Act
+		function define(): void {
+			defineEnum(values);
+		}
+
+		// Assert
+		expect(define).toThrow(TypeError);
+	});
+
+	it("rejects non-enumerable members", () => {
+		// Arrange
+		expect.hasAssertions();
+		const values = { Hidden: "hidden" } as const;
+		Object.defineProperty(values, "Hidden", { enumerable: false });
+
+		// Act
+		function define(): void {
+			defineEnum(values);
+		}
+
+		// Assert
+		expect(define).toThrow(TypeError);
+	});
+
+	it("rejects accessors without invoking them", () => {
+		// Arrange
+		expect.hasAssertions();
+		const values = { Ready: "ready" } as const;
+		const getter = vi.fn<() => string>(() => "ready");
+		Object.defineProperty(values, "Ready", { get: getter });
+
+		// Act
+		function define(): void {
+			defineEnum(values);
+		}
+
+		// Assert
+		expect(define).toThrow(TypeError);
+		expect(getter).not.toHaveBeenCalled();
+	});
+
+	it("rejects symbol keys at compile time and runtime", () => {
 		// Arrange
 		expect.hasAssertions();
 		const values = { Own: "own", [Symbol("Hidden")]: "symbol" } as const;
-		Object.setPrototypeOf(values, { Inherited: "inherited" });
-		Object.defineProperty(values, "Hidden", { value: "hidden", enumerable: false });
-		const members = defineEnum(values);
 
 		// Act
-		const result = {
-			member: isEnum(members, input),
-			name: reverseEnum(members, input),
-			parse: () => parseEnum(members, input),
-		};
+		type DefinitionInput = Parameters<typeof defineEnum<typeof values>>[0];
+		function define(): void {
+			// @ts-expect-error Symbol keys are not enum members.
+			defineEnum(values);
+		}
 
 		// Assert
-		expect(result).toMatchObject({ member: false, name: undefined });
-		expect(result.parse).toThrow(TypeError);
-		expect(isEnum(members, "own")).toBe(true);
-		expect(reverseEnum(members, "own")).toBe("Own");
+		expectTypeOf<DefinitionInput>().toBeNever();
+		expect(define).toThrow(TypeError);
+	});
+
+	it.each([true, null, undefined, 1n, Symbol("ready"), {}, ["ready"]])(
+		"rejects non-primitive member values at runtime: %s",
+		(value) => {
+			// Arrange
+			expect.hasAssertions();
+			const values = { Ready: "ready" } as const;
+			Object.defineProperty(values, "Ready", { value });
+
+			// Act
+			function define(): void {
+				defineEnum(values);
+			}
+
+			// Assert
+			expect(define).toThrow(TypeError);
+		},
+	);
+
+	it("supports plain definitions without a prototype", () => {
+		// Arrange
+		expect.hasAssertions();
+		const values = { Ready: "ready" } as const;
+		Object.setPrototypeOf(values, null);
+
+		// Act
+		const states = defineEnum(values);
+
+		// Assert
+		expect(isEnum(states, "ready")).toBe(true);
+		expect(Object.isFrozen(states)).toBe(true);
 	});
 });
 
@@ -352,7 +629,7 @@ describe("enum member types", () => {
 	])("retains members from every union branch for $name", ({ values, input, name }) => {
 		// Arrange
 		expect.hasAssertions();
-		const members = defineEnum(values);
+		const members = values;
 
 		// Act
 		const parsed = parseEnum(members, input);
