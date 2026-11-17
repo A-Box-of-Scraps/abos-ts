@@ -63,4 +63,5 @@ All notable changes to this package are documented
 
 ## License
 
-Licensed under the [MIT License](LICENSE) by A Box of Scraps.
+Licensed under the [MIT License](https://github.com/A-Box-of-Scraps/abos-ts/blob/HEAD/packages/utils/LICENSE) by A Box
+of Scraps.
