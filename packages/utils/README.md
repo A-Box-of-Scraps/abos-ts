@@ -11,7 +11,15 @@ npm install @a-box-of-scraps/ts-utils
 The package ships compiled ESM and TypeScript declarations.
 
 ```ts
-import { assertNever, Result, defineEnum, type EnumValue, isEnum, parseEnum, reverseEnum } from "@a-box-of-scraps/ts-utils";
+import {
+	assertNever,
+	defineEnum,
+	type EnumValue,
+	isEnum,
+	parseEnum,
+	Result,
+	reverseEnum,
+} from "@a-box-of-scraps/ts-utils";
 ```
 
 ## Utilities
