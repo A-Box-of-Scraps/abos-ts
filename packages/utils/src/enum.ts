@@ -46,13 +46,14 @@ type UppercaseLetter =
 	| "Y"
 	| "Z";
 type Letter = UppercaseLetter | Lowercase<UppercaseLetter>;
+type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
-type LettersOnly<Text extends string> = Text extends "" ? true
-	: Text extends `${Letter}${infer Rest}` ? LettersOnly<Rest>
+type AlphanumericOnly<Text extends string> = Text extends "" ? true
+	: Text extends `${Letter | Digit}${infer Rest}` ? AlphanumericOnly<Rest>
 	: false;
 
 type MemberName<Name extends string> = [Literal<Name>] extends [never] ? never
-	: Name extends `${UppercaseLetter}${infer Rest}` ? LettersOnly<Rest> extends true ? Name : never
+	: Name extends `${UppercaseLetter}${infer Rest}` ? AlphanumericOnly<Rest> extends true ? Name : never
 	: never;
 
 type NewMemberName<Definition extends Members, Name extends string> =
@@ -68,7 +69,7 @@ type Append<Definition extends Members, Name extends string, Value extends Primi
 const memberToken = Symbol("enum member constructor");
 
 // Private fields are not carried into the type of an object spread.
-class Member<Brand extends symbol, Value extends Primitive> {
+class EnumMember<Brand extends symbol, Value extends Primitive> {
 	readonly #brand: Brand;
 	readonly value: Value;
 
@@ -89,31 +90,25 @@ class Member<Brand extends symbol, Value extends Primitive> {
 	}
 }
 
-type RuntimeMember = Member<symbol, Primitive>;
+type RuntimeMember = EnumMember<symbol, Primitive>;
 type MemberMap = ReadonlyMap<string, RuntimeMember>;
 
-type EnumMember<Brand extends symbol, Value extends Primitive> = Value extends Primitive ? Member<Brand, Value> : never;
+type MemberVariants<Brand extends symbol, Value extends Primitive> = Value extends Primitive ? EnumMember<Brand, Value>
+	: never;
 
-type MemberUnion<Brand extends symbol, Definition extends Members> = EnumMember<Brand, Definition[keyof Definition]>;
-
-declare const definition: unique symbol;
+type MemberUnion<Brand extends symbol, Definition extends Members> = MemberVariants<
+	Brand,
+	Definition[keyof Definition]
+>;
 
 type Enum<Brand extends symbol, Definition extends Members> =
+	& Snapshot<Brand, Definition>
 	& {
-		readonly [Name in keyof Definition]: EnumMember<Brand, Definition[Name]>;
-	}
-	& {
-		// Brand and definition must both remain invariant when an enum is used as a guard.
-		readonly [definition]: (brand: Brand, members: Definition) => readonly [Brand, Definition];
-		readonly add: <const Name extends string, const Value extends Primitive>(
-			name: Name & NewMemberName<Definition, Name>,
-			value: Value & Literal<Value>,
-		) => Enum<Brand, Append<Definition, Name, Value>>;
+		readonly [Name in keyof Definition]: MemberVariants<Brand, Definition[Name]>;
 	};
 
-type EnumValue<EnumType> = EnumType extends {
-	readonly [definition]: (brand: infer Brand extends symbol, members: infer Definition extends Members) => unknown;
-} ? MemberUnion<Brand, Definition>
+type EnumValue<EnumType> = EnumType extends Snapshot<infer Brand, infer Definition, unknown>
+	? MemberUnion<Brand, Definition>
 	: never;
 
 interface Domain {
@@ -141,19 +136,47 @@ function getOrCreateMember(domain: Domain, value: Primitive): RuntimeMember {
 	let member = domain.canonicalMembers.get(value);
 
 	if (member === undefined) {
-		member = new Member(memberToken, domain.brand, value);
+		member = new EnumMember(memberToken, domain.brand, value);
 		domain.canonicalMembers.set(value, member);
 	}
 
 	return member;
 }
 
-function createEnum(domain: Domain, members: MemberMap): object {
-	const result: Record<string, unknown> = Object.fromEntries(members);
+declare const definition: unique symbol;
 
-	function add(name: unknown, value: unknown): object {
-		if (typeof name !== "string" || !/^[A-Z][A-Za-z]*$/.test(name)) {
-			throw new TypeError("Enum names must start with an uppercase ASCII letter and contain only ASCII letters");
+type Builder<Brand extends symbol, Definition extends Members> = <
+	const Name extends string,
+	const Value extends Primitive,
+>(
+	name: Name & NewMemberName<Definition, Name>,
+	value: Value & Literal<Value>,
+) => Enum<Brand, Append<Definition, Name, Value>>;
+
+class Snapshot<Brand extends symbol, Definition extends Members, Add = Builder<Brand, Definition>> {
+	// Guards require both parameters to stay invariant. The marker is neither emitted nor spread.
+	declare protected readonly [definition]: (brand: Brand, members: Definition) => readonly [Brand, Definition];
+	readonly #add: Add;
+
+	constructor(add: Add) {
+		this.#add = add;
+	}
+
+	get add(): Add {
+		return this.#add;
+	}
+
+	static {
+		Object.freeze(this.prototype);
+	}
+}
+
+function createEnum(domain: Domain, members: MemberMap): object {
+	const result = new Snapshot((name: unknown, value: unknown) => {
+		if (typeof name !== "string" || !/^[A-Z][A-Za-z0-9]*$/.test(name)) {
+			throw new TypeError(
+				"Enum names must start with an uppercase ASCII letter and contain only ASCII letters or digits",
+			);
 		}
 
 		if (members.has(name)) {
@@ -167,13 +190,14 @@ function createEnum(domain: Domain, members: MemberMap): object {
 		const member = getOrCreateMember(domain, value);
 
 		return createEnum(domain, new Map([...members, [name, member]]));
+	});
+
+	for (const [name, member] of members) {
+		Object.defineProperty(result, name, { value: member, enumerable: true });
 	}
 
-	Object.defineProperty(result, "add", { value: add });
 	Object.freeze(result);
-
 	snapshots.set(result, members);
-
 	return result;
 }
 
@@ -206,6 +230,14 @@ function isEnum<const Brand extends symbol, const Definition extends Members>(
 	return false;
 }
 
+function invalidEnumValue(input: unknown): TypeError {
+	if (input !== null && (typeof input === "object" || typeof input === "function")) {
+		return new TypeError("Invalid enum value");
+	}
+
+	return new TypeError(`Invalid enum value: ${String(input)}`);
+}
+
 function parseEnum<const Brand extends symbol, const Definition extends Members>(
 	values: Enum<Brand, Definition>,
 	input: unknown,
@@ -214,7 +246,7 @@ function parseEnum<const Brand extends symbol, const Definition extends Members>
 function parseEnum(
 	values: object,
 	input: unknown,
-	createError: (input: unknown) => Error = (value) => new TypeError(`Invalid enum value: ${String(value)}`),
+	createError: (input: unknown) => Error = invalidEnumValue,
 ): RuntimeMember {
 	for (const member of getMembers(values).values()) {
 		if (member === input || member.value === input) {

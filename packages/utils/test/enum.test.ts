@@ -48,7 +48,23 @@ test("freezes enums and their members", () => {
 	expect(frozen).toBe(true);
 	expect(Reflect.set(values, "Ready", {})).toBe(false);
 	expect(Reflect.set(values.Ready, "value", "changed")).toBe(false);
-	expect(Reflect.deleteProperty(values, "add")).toBe(false);
+	expect(Reflect.set(values, "add", () => empty)).toBe(false);
+});
+
+test("keeps a detached builder bound to its snapshot", () => {
+	// Arrange
+	expect.hasAssertions();
+	const brand = Symbol("status");
+	const ready = defineEnum(brand).add("Ready", "ready");
+	const { add } = ready;
+
+	// Act
+	const extended = add("Done", "done");
+
+	// Assert
+	expect(extended.Ready).toBe(ready.Ready);
+	expect(extended.Done.value).toBe("done");
+	expect(Object.keys(ready)).toStrictEqual(["Ready"]);
 });
 
 test("canonicalizes aliases across immutable branches", () => {
@@ -151,7 +167,23 @@ test.each([undefined, null, "brand", 1, true, {}, Symbol.for("enum-test")])(
 	},
 );
 
-test.each(["", "ready", "A1", "A_B", "A-B", "A B", " Ready", "Ready\n", "État", "Aé", "add", "__proto__", 1, null])(
+test.each([
+	"",
+	"ready",
+	"1A",
+	"A１",
+	"A_B",
+	"A-B",
+	"A B",
+	" Ready",
+	"Ready\n",
+	"État",
+	"Aé",
+	"add",
+	"__proto__",
+	1,
+	null,
+])(
 	"rejects invalid member name %j",
 	(name) => {
 		// Arrange
@@ -191,18 +223,18 @@ test.each([undefined, null, true, {}, [], Symbol("value"), 1n, NaN, Infinity, -I
 	},
 );
 
-test("accepts single-letter names, mixed case, empty strings and finite numbers", () => {
+test("accepts single-letter and alphanumeric names, empty strings and finite numbers", () => {
 	// Arrange
 	expect.hasAssertions();
 	const brand = Symbol("values");
 
 	// Act
-	const values = defineEnum(brand).add("A", "").add("HTTP", -2).add("MixedCase", 1.5);
+	const values = defineEnum(brand).add("A", "").add("HTTP", -2).add("Http2Status200", 1.5);
 
 	// Assert
 	expect(values.A.value).toBe("");
 	expect(values.HTTP.value).toBe(-2);
-	expect(values.MixedCase.value).toBe(1.5);
+	expect(values.Http2Status200.value).toBe(1.5);
 });
 
 test("rejects duplicate names even when their values match", () => {
@@ -358,6 +390,30 @@ test("does not coerce primitive input while parsing", () => {
 	expect(parseString).toThrow(new TypeError("Invalid enum value: 1"));
 });
 
+test("does not call input coercion hooks when constructing the default parse error", () => {
+	// Arrange
+	expect.hasAssertions();
+	const brand = Symbol("status");
+	const values = defineEnum(brand);
+	const toPrimitive = vi.fn<() => never>(() => {
+		throw new RangeError("Unexpected coercion");
+	});
+	const object = { [Symbol.toPrimitive]: toPrimitive };
+
+	// Act
+	function parseObject(): unknown {
+		return parseEnum(values, object);
+	}
+	function parseCallable(): unknown {
+		return parseEnum(values, Object.assign(() => undefined, object));
+	}
+
+	// Assert
+	expect(parseObject).toThrow(new TypeError("Invalid enum value"));
+	expect(parseCallable).toThrow(new TypeError("Invalid enum value"));
+	expect(toPrimitive).not.toHaveBeenCalled();
+});
+
 test("calls a custom error factory only on failure with the unchanged input", () => {
 	// Arrange
 	expect.hasAssertions();
@@ -382,6 +438,7 @@ test("requires original enum instances for all lookup helpers", () => {
 	const brand = Symbol("status");
 	const values = defineEnum(brand).add("Ready", "ready");
 	const impostors: unknown[] = [
+		// oxlint-disable-next-line typescript/no-misused-spread
 		{ ...values },
 		Object.create(values),
 		new Proxy(values, {}),

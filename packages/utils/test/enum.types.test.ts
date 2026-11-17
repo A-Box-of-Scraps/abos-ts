@@ -1,6 +1,5 @@
 /* oxlint-disable no-magic-numbers, unicorn/no-null, vitest/prefer-to-be-falsy */
-import { type Enum, type EnumMember } from "#src/enum";
-import { defineEnum, type EnumValue, isEnum, parseEnum, reverseEnum } from "#src/index";
+import { defineEnum, type Enum, type EnumMember, type EnumValue, isEnum, parseEnum, reverseEnum } from "#src/index";
 import { expect, expectTypeOf, test } from "vitest";
 
 test("preserves literal values and the unique brand", () => {
@@ -44,8 +43,7 @@ test("infers a discriminated member union and identical alias types", () => {
 	// Assert
 	expectTypeOf(values.Available).toEqualTypeOf<typeof values.Ready>();
 	expectTypeOf<EnumValue<typeof values>>().toEqualTypeOf<typeof values.Ready | typeof values.Done>();
-	expectTypeOf<EnumMember<typeof brand, "ready" | 1>>()
-		.toEqualTypeOf<typeof values.Ready | typeof values.Done>();
+	expectTypeOf(values.Ready).toEqualTypeOf<EnumMember<typeof brand, "ready">>();
 	expect(values.Available).toBe(values.Ready);
 });
 
@@ -105,6 +103,26 @@ test("keeps brands nominal and prevents structural member forgery", () => {
 	expect(isEnum(first, spread)).toBe(false);
 });
 
+test("spreading a snapshot copies only its named members", () => {
+	// Arrange
+	expect.hasAssertions();
+	const brand = Symbol("status");
+	const values = defineEnum(brand).add("Ready", "ready");
+
+	// Act
+	// oxlint-disable-next-line typescript/no-misused-spread
+	const copy = { ...values };
+
+	// Assert
+	expectTypeOf(copy).toEqualTypeOf<{ Ready: typeof values.Ready }>();
+	expectTypeOf<EnumValue<typeof copy>>().toBeNever();
+	expectTypeOf({ ...copy, add: values.add }).not.toExtend<typeof values>();
+	expect(copy.Ready).toBe(values.Ready);
+	expect(copy).not.toHaveProperty("add");
+	// @ts-expect-error A spread is not an enum snapshot.
+	expect(() => isEnum(copy, values.Ready)).toThrow(TypeError);
+});
+
 test("keeps enum brands and definitions invariant", () => {
 	// Arrange
 	expect.hasAssertions();
@@ -143,6 +161,26 @@ test("rejects widened or union brands at compile time", () => {
 	expect(invalidBrands).toBeTypeOf("function");
 });
 
+test("allows ASCII digits only after the initial letter", () => {
+	// Arrange
+	expect.hasAssertions();
+	const brand = Symbol("protocol");
+	const values = defineEnum(brand);
+
+	// Act
+	const protocols = values.add("Http2", "h2");
+	function invalidNames(): void {
+		// @ts-expect-error Digits cannot start a name.
+		values.add("1Ready", 0);
+		// @ts-expect-error Only ASCII digits are allowed.
+		values.add("Ready１", 0);
+	}
+
+	// Assert
+	expectTypeOf(protocols.Http2.value).toEqualTypeOf<"h2">();
+	expect(invalidNames).toBeTypeOf("function");
+});
+
 test("rejects invalid, widened, union and open-template member names at compile time", () => {
 	// Arrange
 	expect.hasAssertions();
@@ -155,8 +193,6 @@ test("rejects invalid, widened, union and open-template member names at compile 
 		values.add("", 0);
 		// @ts-expect-error Names must start with an uppercase ASCII letter.
 		values.add("ready", 0);
-		// @ts-expect-error Digits are not allowed in names.
-		values.add("Ready1", 0);
 		// @ts-expect-error Punctuation is not allowed in names.
 		values.add("Ready_State", 0);
 		// @ts-expect-error Non-ASCII letters are not allowed in names.

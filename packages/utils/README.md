@@ -20,18 +20,31 @@ This library provides the following utilities:
 
 ### Branded Enum
 
-`defineEnum(brand)` creates an enum with branded runtime members. Declare a fresh brand with `const brand = Symbol()`
-and chain `.add("Name", value)` calls using string or finite number literals. `EnumValue<typeof MyEnum>` gives the union
-of its members. Separate brands keep unrelated enums distinct, even when their primitive values match.
+`defineEnum(brand)` creates an empty enum. Declare a fresh brand at module scope for each enum you want TypeScript to
+keep distinct. Creating a symbol inside a factory gives each call a different runtime brand, but TypeScript does not
+give each call a different type.
 
-Compare members directly and read `.value` when building API payloads. `isEnum(MyEnum, input)` narrows unknown input
-only when it is an actual member; it does not accept raw values. `parseEnum(MyEnum, input)` accepts either a member or
-its primitive value and returns the canonical member. Invalid input throws a `TypeError` by default, or an error from
-the optional custom error factory.
+```ts
+import { defineEnum, type EnumValue } from "@pi-pack/ts-utils";
 
-Each `.add()` call returns a new immutable snapshot without changing the original, preserving existing member
-identities. Names with the same value are aliases of one member. `reverseEnum(MyEnum, member)` returns the last declared
-name for that member, or `undefined` if the input is not a member of that snapshot.
+const protocolBrand = Symbol("Protocol");
+export const Protocol = defineEnum(protocolBrand).add("Http2", "h2");
+export type Protocol = EnumValue<typeof Protocol>;
+```
+
+Member names must start with an uppercase ASCII letter; the remaining characters can be ASCII letters or digits. Values
+must be string or finite number literals. `EnumValue` gives the union of the members. You can export an enum without a
+type annotation, including from libraries that emit TypeScript declarations.
+
+Compare members directly and read `.value` when building API payloads. `isEnum(Protocol, input)` recognizes members, not
+raw values. `parseEnum(Protocol, "h2")` and `parseEnum(Protocol, Protocol.Http2)` both return `Protocol.Http2`. Invalid
+input throws a `TypeError` by default without coercing objects or functions. Pass a third argument to `parseEnum` to
+create a custom error from the original input.
+
+Each `.add()` returns a new immutable snapshot that preserves existing member identities. Spreading a snapshot copies
+only the named members, not `.add`; pass the original snapshot to lookup helpers. Names with the same value in one enum
+are aliases of one member. `reverseEnum(MyEnum, member)` returns the last name declared for that member in the given
+snapshot, or `undefined` if the member is absent.
 
 ### Result
 
