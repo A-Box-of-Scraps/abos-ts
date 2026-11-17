@@ -1,4 +1,11 @@
-import plugin, { expressionComplexity, namedConditions, noDuplicateStrings, noMagicStrings, rules } from "#src/index";
+import plugin, {
+	expressionComplexity,
+	namedConditions,
+	noDuplicateStrings,
+	noMagicStrings,
+	noShallowTypePredicate,
+	rules,
+} from "#src/index";
 import { describe, expect, it } from "vitest";
 
 describe("plugin exports", () => {
@@ -8,6 +15,7 @@ describe("plugin exports", () => {
 			{ name: "named-conditions", rule: namedConditions },
 			{ name: "no-duplicate-strings", rule: noDuplicateStrings },
 			{ name: "no-magic-strings", rule: noMagicStrings },
+			{ name: "no-shallow-type-predicate", rule: noShallowTypePredicate },
 		] as const,
 	)("registers $name", ({ name, rule }) => {
 		// Arrange

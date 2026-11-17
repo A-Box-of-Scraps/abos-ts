@@ -110,6 +110,7 @@ export default defineConfig({
 				"abos/named-conditions": "error",
 				"abos/no-duplicate-strings": "error",
 				"abos/no-magic-strings": "error",
+				"abos/no-shallow-type-predicate": "warn",
 				// Erase type-only imports entirely to avoid runtime dependencies in lint plugins.
 				"import/consistent-type-specifier-style": ["error", "prefer-top-level"],
 			},

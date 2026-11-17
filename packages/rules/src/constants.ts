@@ -3,6 +3,21 @@ const FIRST_QUASI = 0;
 const FIRST_OPTION = 0;
 
 const NODE_TYPE = {
+	Identifier: "Identifier",
+	BlockStatement: "BlockStatement",
+	ReturnStatement: "ReturnStatement",
+	CallExpression: "CallExpression",
+	BinaryExpression: "BinaryExpression",
+	MemberExpression: "MemberExpression",
+	TSTypeReference: "TSTypeReference",
+	TSTypeAliasDeclaration: "TSTypeAliasDeclaration",
+	TSInterfaceDeclaration: "TSInterfaceDeclaration",
+	TSTypeLiteral: "TSTypeLiteral",
+	TSPropertySignature: "TSPropertySignature",
+	TSTypePredicate: "TSTypePredicate",
+	TSArrayType: "TSArrayType",
+	TSTypeOperator: "TSTypeOperator",
+	TSStringKeyword: "TSStringKeyword",
 	ArrowFunctionExpression: "ArrowFunctionExpression",
 	ConditionalExpression: "ConditionalExpression",
 	DoWhileStatement: "DoWhileStatement",
