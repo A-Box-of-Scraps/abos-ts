@@ -17,10 +17,9 @@ const typeofResults = new Set([
 ]);
 
 function getStaticString(node: Node): string | undefined {
-	if (node.type === NODE_TYPE.Literal) {
-		if (typeof node.value === "string") {
-			return node.value;
-		}
+	const literalValue = node.type === NODE_TYPE.Literal && node.value;
+	if (typeof literalValue === "string") {
+		return literalValue;
 	}
 	const isStaticTemplate = node.type === NODE_TYPE.TemplateLiteral && node.expressions.length === EMPTY_EXPRESSIONS;
 	if (isStaticTemplate) {
