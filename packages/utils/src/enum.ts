@@ -1,12 +1,15 @@
 type Primitive = string | number;
 type Members = Readonly<Record<string, Primitive>>;
+// No keys represents the initial snapshot and tests whether a literal requires a property.
+// oxlint-disable-next-line typescript/no-generated-empty-object-type
+type EmptyMembers = Record<never, never>;
 type IsUnion<Value, Whole = Value> = Value extends Whole ? [Whole] extends [Value] ? false : true : never;
 
 // A single literal requires a concrete property; open template types and widened types do not.
 type Literal<Value extends Primitive> = string extends Value ? never
 	: number extends Value ? never
 	: true extends IsUnion<Value> ? never
-	: Record<never, never> extends Record<Value, unknown> ? never
+	: EmptyMembers extends Record<Value, unknown> ? never
 	: Value;
 type UniqueBrand<Brand extends symbol> = symbol extends Brand ? never
 	: true extends IsUnion<Brand> ? never
@@ -123,6 +126,15 @@ function getState(value: object): State {
 	return state;
 }
 
+function getOrCreateMember(domain: Domain, value: Primitive): Member<symbol, Primitive> {
+	let member = domain.canonicalMembers.get(value);
+	if (member === undefined) {
+		member = new Member(memberToken, domain.brand, value);
+		domain.canonicalMembers.set(value, member);
+	}
+	return member;
+}
+
 function createEnum(domain: Domain, members: ReadonlyMap<string, Member<symbol, Primitive>>): object {
 	const result: Record<string, unknown> = Object.fromEntries(members);
 
@@ -137,11 +149,7 @@ function createEnum(domain: Domain, members: ReadonlyMap<string, Member<symbol, 
 			throw new TypeError("Enum values must be strings or finite numbers");
 		}
 
-		let member = domain.canonicalMembers.get(value);
-		if (member === undefined) {
-			member = new Member(memberToken, domain.brand, value);
-			domain.canonicalMembers.set(value, member);
-		}
+		const member = getOrCreateMember(domain, value);
 		return createEnum(domain, new Map([...members, [name, member]]));
 	}
 
@@ -151,7 +159,8 @@ function createEnum(domain: Domain, members: ReadonlyMap<string, Member<symbol, 
 	return result;
 }
 
-function defineEnum<const Brand extends symbol>(brand: Brand & UniqueBrand<Brand>): Enum<Brand, Record<never, never>> {
+function defineEnum<const Brand extends symbol>(brand: Brand & UniqueBrand<Brand>): Enum<Brand, EmptyMembers>;
+function defineEnum(brand: symbol): object {
 	if (typeof brand !== "symbol" || Symbol.keyFor(brand) !== undefined) {
 		throw new TypeError("Enum brands must be non-registered symbols created with Symbol()");
 	}
@@ -160,7 +169,7 @@ function defineEnum<const Brand extends symbol>(brand: Brand & UniqueBrand<Brand
 	}
 	const domain: Domain = { brand, canonicalMembers: new Map() };
 	domains.set(brand, domain);
-	return createEnum(domain, new Map()) as Enum<Brand, Record<never, never>>;
+	return createEnum(domain, new Map());
 }
 
 function isEnum<const Brand extends symbol, const Definition extends Members>(
@@ -182,12 +191,17 @@ function isEnum<const Brand extends symbol, const Definition extends Members>(
 function parseEnum<const Brand extends symbol, const Definition extends Members>(
 	values: Enum<Brand, Definition>,
 	input: unknown,
+	createError?: (input: unknown) => Error,
+): EnumMember<Brand, Definition[keyof Definition]>;
+function parseEnum(
+	values: object,
+	input: unknown,
 	createError: (input: unknown) => Error = (value) => new TypeError(`Invalid enum value: ${String(value)}`),
-): EnumMember<Brand, Definition[keyof Definition]> {
+): Member<symbol, Primitive> {
 	for (const member of getState(values).members.values()) {
 		if (member === input || member.value === input) {
 			// Registered snapshots contain exactly the members introduced by add.
-			return member as EnumMember<Brand, Definition[keyof Definition]>;
+			return member;
 		}
 	}
 	throw createError(input);
@@ -196,15 +210,16 @@ function parseEnum<const Brand extends symbol, const Definition extends Members>
 function reverseEnum<const Brand extends symbol, const Definition extends Members>(
 	values: Enum<Brand, Definition>,
 	input: unknown,
-): Extract<keyof Definition, string> | undefined {
-	let name: string | undefined;
+): Extract<keyof Definition, string> | undefined;
+function reverseEnum(values: object, input: unknown): string | undefined {
+	let name: string | undefined = undefined;
 	for (const [memberName, member] of getState(values).members) {
 		if (member === input) {
 			name = memberName;
 		}
 	}
 	// Duplicate values are aliases of one canonical member; the last declared name wins.
-	return name as Extract<keyof Definition, string> | undefined;
+	return name;
 }
 
 export { defineEnum, type Enum, type EnumMember, type EnumValue, isEnum, parseEnum, reverseEnum };
