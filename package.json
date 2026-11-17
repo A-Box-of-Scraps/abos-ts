@@ -32,7 +32,7 @@
     "lint:fix": "oxlint --config oxlint.config.ts --fix .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:declarations": "tsc --project test/tsconfig.declarations.json",
+    "test:declarations": "tsc --project packages/utils/test/consumer/tsconfig.declarations.json",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
