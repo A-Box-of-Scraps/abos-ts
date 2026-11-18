@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
 ### Added
 
 - [`uppercase-primitive-const`](docs/rules/uppercase-primitive-const.md) requires `UPPER_CASE` for top-level `const`
