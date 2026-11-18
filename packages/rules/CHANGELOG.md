@@ -4,4 +4,9 @@
 
 ## [Unreleased]
 
+### Added
+
+- [`uppercase-primitive-const`](docs/rules/uppercase-primitive-const.md) requires `UPPER_CASE` for top-level `const`
+  bindings initialized with primitive literals or negated number literals.
+
 ## [0.2.0] - 2026-11-17

@@ -4,8 +4,13 @@ import type { VariableDeclarator } from "estree";
 
 const upperCaseName = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/;
 const CONST = "const";
+const MINUS = "-";
 
-function isPrimitiveLiteral(init: VariableDeclarator["init"]): boolean {
+function matchesInitializer(init: VariableDeclarator["init"]): boolean {
+	if (init?.type === NODE_TYPE.UnaryExpression) {
+		return init.operator === MINUS && init.argument.type === NODE_TYPE.Literal
+			&& typeof init.argument.value === "number";
+	}
 	if (init?.type === NODE_TYPE.Literal) {
 		return !("regex" in init);
 	}
@@ -15,10 +20,13 @@ function isPrimitiveLiteral(init: VariableDeclarator["init"]): boolean {
 export const uppercasePrimitiveConst: Rule.RuleModule = {
 	meta: {
 		type: "suggestion",
-		docs: { description: "Require UPPER_CASE names for top-level const bindings initialized with primitive literals." },
+		docs: {
+			description:
+				"Require UPPER_CASE names for top-level const bindings initialized with primitive literals or negated number literals.",
+		},
 		schema: [],
 		messages: {
-			uppercaseName: "Use UPPER_CASE for '{{name}}', a top-level const initialized with a primitive literal.",
+			uppercaseName: "Use UPPER_CASE for the top-level constant '{{name}}'.",
 		},
 	},
 	create(context) {
@@ -32,7 +40,7 @@ export const uppercasePrimitiveConst: Rule.RuleModule = {
 					return;
 				}
 				for (const { id, init } of declarations) {
-					const needsUpperCase = id.type === NODE_TYPE.Identifier && isPrimitiveLiteral(init)
+					const needsUpperCase = id.type === NODE_TYPE.Identifier && matchesInitializer(init)
 						&& !upperCaseName.test(id.name);
 					if (needsUpperCase) {
 						context.report({ node: id, messageId: "uppercaseName", data: { name: id.name } });

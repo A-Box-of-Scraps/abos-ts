@@ -1,46 +1,23 @@
 import plugin from "#src/index";
 import { Linter } from "eslint";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const ruleId = "abos/uppercase-primitive-const";
+
+function readFixture(path: string): string {
+	return readFileSync(new URL(`fixtures/uppercase-primitive-const/${path}`, import.meta.url), "utf8");
+}
 
 function lint(code: string): Linter.LintMessage[] {
 	return new Linter().verify(code, { plugins: { abos: plugin }, rules: { [ruleId]: "error" } });
 }
 
 describe("uppercase-primitive-const", () => {
-	it.each([
-		'const userName = "Toto";',
-		"export const maxRetries = 3;",
-		"const enabled = false;",
-		"const missing = null;",
-		"const big = 123n;",
-		"const path = `/api`;",
-	])("reports a primitive literal: %s", (code) => {
+	it.each(["names.js", "initializers.js", "bindings.js"])("allows %s", (file) => {
 		// Arrange
 		expect.hasAssertions();
-
-		// Act
-		const messages = lint(code);
-
-		// Assert
-		expect(messages).toMatchObject([{ ruleId, messageId: "uppercaseName" }]);
-	});
-
-	it.each([
-		'const USER_NAME = "Toto", HEALTH = 100, HTTP_2 = true;',
-		"const userName = user.name, user = getUser(), alias = HEALTH;",
-		"const config = { debug: true }, items = [], handleClick = () => {};",
-		"const pattern = /api/, empty = undefined, key = Symbol();",
-		`const sum = 1 + 2, label = \`item \${sum}\`;`,
-		"const { length } = 'Toto', [first] = 'ok';",
-		"let health = 100; var enabled = true;",
-		"function run() { const local = 1; } { const scoped = false; }",
-		"for (const start = 0; start < 1;) break;",
-		"const UPPER_OBJECT = {}; export { UPPER_OBJECT };",
-	])("leaves nonviolations alone: %s", (code) => {
-		// Arrange
-		expect.hasAssertions();
+		const code = readFixture(`valid/${file}`);
 
 		// Act
 		const messages = lint(code);
@@ -49,18 +26,25 @@ describe("uppercase-primitive-const", () => {
 		expect(messages).toStrictEqual([]);
 	});
 
-	it("checks each binding of an exported declaration independently", () => {
+	it.each([
+		{
+			file: "literals.js",
+			names: ["userName", "maxRetries", "debt", "offset", "negativeZero", "enabled", "missing", "big", "path"],
+		},
+		{ file: "mixed-export.js", names: ["max", "apiUrl"] },
+	])("reports only the offending bindings in $file", ({ file, names }) => {
 		// Arrange
 		expect.hasAssertions();
-		const code = "export const ON = true, user = getUser(), max = 3, apiUrl = '/api';";
+		const code = readFixture(`invalid/${file}`);
 
 		// Act
 		const messages = lint(code);
 
 		// Assert
-		expect(messages).toMatchObject([
-			{ ruleId, message: "Use UPPER_CASE for 'max', a top-level const initialized with a primitive literal." },
-			{ ruleId, message: "Use UPPER_CASE for 'apiUrl', a top-level const initialized with a primitive literal." },
-		]);
+		expect(messages).toMatchObject(names.map((name) => ({
+			ruleId,
+			messageId: "uppercaseName",
+			message: `Use UPPER_CASE for the top-level constant '${name}'.`,
+		})));
 	});
 });

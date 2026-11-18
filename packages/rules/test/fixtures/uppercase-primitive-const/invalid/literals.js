@@ -1,0 +1,9 @@
+const userName = "Toto";
+export const maxRetries = 3;
+const debt = -100;
+export const offset = -0.04;
+const negativeZero = -0;
+const enabled = false;
+const missing = null;
+const big = 123n;
+const path = `/api`;
