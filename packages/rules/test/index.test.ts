@@ -5,6 +5,7 @@ import plugin, {
 	noMagicStrings,
 	noShallowTypePredicate,
 	rules,
+	uppercasePrimitiveConst,
 } from "#src/index";
 import { describe, expect, it } from "vitest";
 
@@ -16,6 +17,7 @@ describe("plugin exports", () => {
 			{ name: "no-duplicate-strings", rule: noDuplicateStrings },
 			{ name: "no-magic-strings", rule: noMagicStrings },
 			{ name: "no-shallow-type-predicate", rule: noShallowTypePredicate },
+			{ name: "uppercase-primitive-const", rule: uppercasePrimitiveConst },
 		] as const,
 	)("registers $name", ({ name, rule }) => {
 		// Arrange
