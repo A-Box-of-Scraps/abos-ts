@@ -1,6 +1,6 @@
 {
   "name": "@a-box-of-scraps/ts-rules",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Box of Scraps's TypeScript lint rules.",
   "keywords": [
     "lint",
