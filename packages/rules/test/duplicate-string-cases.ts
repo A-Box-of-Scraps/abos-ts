@@ -191,6 +191,14 @@ const invalid: InvalidTestCase[] = [
 ];
 
 const typescriptValid: TestCase[] = [{
+	name: "import assignments and module augmentations do not contribute to the runtime threshold",
+	code: [
+		"import service = require('example-package');",
+		"declare module 'example-package' { interface Api { id: string } }",
+		"use('example-package', 'example-package');",
+	].join("\n"),
+	filename: "input.cts",
+}, {
 	name: "import types do not contribute to the runtime string threshold",
 	code: "type A = import('example-package').A; type B = typeof import('example-package'); import('example-package');",
 	filename: "input.ts",
@@ -201,6 +209,16 @@ const typescriptValid: TestCase[] = [{
 }];
 
 const typescriptInvalid: InvalidTestCase[] = [{
+	name: "ordinary require calls count even alongside an import assignment",
+	code:
+		"import service = require('example-package');\nrequire('example-package');\nuse('example-package', 'example-package');",
+	filename: "input.cts",
+	errors: [
+		{ occurrences: 3, line: 2, column: 9 },
+		{ occurrences: 3, line: 3, column: 5 },
+		{ occurrences: 3, line: 3, column: 24 },
+	],
+}, {
 	name: "runtime import and ordinary values still count alongside an import type",
 	code: "type A = import('example-package').A; import('example-package'); use('example-package', 'example-package');",
 	filename: "input.ts",

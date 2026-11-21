@@ -18,6 +18,8 @@ const moduleSyntaxParents = new Set<string>([
 	NODE_TYPE.ExportNamedDeclaration,
 	NODE_TYPE.ExportAllDeclaration,
 	NODE_TYPE.TSImportType,
+	"TSExternalModuleReference",
+	"TSModuleDeclaration",
 	"ImportAttribute",
 	"ImportSpecifier",
 	"ExportSpecifier",
