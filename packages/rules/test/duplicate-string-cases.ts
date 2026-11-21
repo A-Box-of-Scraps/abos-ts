@@ -27,6 +27,15 @@ function readFixture(path: string): string {
 
 const valid: TestCase[] = [
 	{
+		name: "static imports and re-exports do not count toward the threshold",
+		code: [
+			"import { a } from 'example-package';",
+			"export { b } from 'example-package';",
+			"export * from 'example-package';",
+			"use('example-package', 'example-package');",
+		].join("\n"),
+	},
+	{
 		name: "program and function directives do not contribute to the threshold",
 		code: "'use strict'; function f() { 'use strict'; } use('use strict', 'use strict');",
 	},
@@ -59,6 +68,15 @@ const valid: TestCase[] = [
 ];
 
 const invalid: InvalidTestCase[] = [
+	{
+		name: "dynamic imports and ordinary strings count even when the same path is statically imported",
+		code: "import 'example-package';\nimport('example-package');\nuse('example-package');\nuse('example-package');",
+		errors: [
+			{ occurrences: 3, line: 2, column: 8 },
+			{ occurrences: 3, line: 3, column: 5 },
+			{ occurrences: 3, line: 4, column: 5 },
+		],
+	},
 	{
 		name: "ordinary occurrences of a directive value still count",
 		code: "'use strict'; use('use strict', 'use strict'); 'use strict';",

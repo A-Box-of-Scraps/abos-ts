@@ -1,4 +1,4 @@
-import { EMPTY_EXPRESSIONS, FIRST_OPTION, FIRST_QUASI } from "#src/constants";
+import { EMPTY_EXPRESSIONS, FIRST_OPTION, FIRST_QUASI, NODE_TYPE } from "#src/constants";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
@@ -9,6 +9,13 @@ interface Options {
 	threshold?: number;
 	ignoreStrings?: string[];
 	shortString?: number;
+}
+
+function isStaticModuleSource(node: Node, parent: Node): boolean {
+	const isModuleDeclaration = parent.type === NODE_TYPE.ImportDeclaration
+		|| parent.type === NODE_TYPE.ExportNamedDeclaration
+		|| parent.type === NODE_TYPE.ExportAllDeclaration;
+	return isModuleDeclaration && parent.source === node;
 }
 
 export const noDuplicateStrings: Rule.RuleModule = {
@@ -55,7 +62,7 @@ export const noDuplicateStrings: Rule.RuleModule = {
 			Literal(node) {
 				const { parent, value } = node;
 				const isDirective = "directive" in parent && typeof parent.directive === "string";
-				const isCountedString = typeof value === "string" && !isDirective;
+				const isCountedString = typeof value === "string" && !isDirective && !isStaticModuleSource(node, parent);
 				if (isCountedString) {
 					collect(node, value);
 				}

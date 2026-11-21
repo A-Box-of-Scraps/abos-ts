@@ -3,6 +3,8 @@ const FIRST_QUASI = 0;
 const FIRST_OPTION = 0;
 
 const NODE_TYPE = {
+	ImportDeclaration: "ImportDeclaration",
+	ExportAllDeclaration: "ExportAllDeclaration",
 	ExportNamedDeclaration: "ExportNamedDeclaration",
 	Program: "Program",
 	Identifier: "Identifier",
