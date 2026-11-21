@@ -11,11 +11,12 @@ interface Options {
 	shortString?: number;
 }
 
-// Direct literal children in these positions name modules or exports, not runtime values.
+// Direct literal children in these positions are module syntax, not runtime values.
 const moduleSyntaxParents = new Set<string>([
 	NODE_TYPE.ImportDeclaration,
 	NODE_TYPE.ExportNamedDeclaration,
 	NODE_TYPE.ExportAllDeclaration,
+	"ImportAttribute",
 	"ImportSpecifier",
 	"ExportSpecifier",
 ]);

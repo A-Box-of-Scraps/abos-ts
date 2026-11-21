@@ -28,6 +28,7 @@ const typeOnlyDeclarations = new Set<string>([
 	NODE_TYPE.TSInterfaceDeclaration,
 	"TSTypeParameter",
 ]);
+const valueOnlyDefinitions = new Set<string>(["Variable", "FunctionName", "Parameter", "CatchClause"]);
 const unconstrained = new Set<string>(["TSAnyKeyword", "TSUnknownKeyword"]);
 const concreteValues = new Set<string>([
 	"TSStringKeyword",
@@ -49,11 +50,12 @@ const inequality = new Set(["!==", "!="]);
 type GuardFunction = FunctionNode | ArrowFunctionExpression;
 type Container = typeof OBJECT | typeof ARRAY_CONTAINER;
 
-function binding(scope: Scope.Scope, name: string): Scope.Variable | undefined {
+function typeDefinitions(scope: Scope.Scope, name: string): Scope.Definition[] | undefined {
 	for (let current: Scope.Scope | null = scope; current !== null; current = current.upper) {
-		const variable = current.set.get(name);
-		if (variable !== undefined) {
-			return variable;
+		const defs = current.set.get(name)?.defs.filter((def) => !valueOnlyDefinitions.has(def.type));
+		const hasTypeDefinitions = defs !== undefined && defs.length > NONE;
+		if (hasTypeDefinitions) {
+			return defs;
 		}
 	}
 	return undefined;
@@ -78,7 +80,7 @@ function localDeclaration(type: TSTypeReference, scope: Scope.Scope): TSNode | u
 	if (type.typeName.type !== NODE_TYPE.Identifier) {
 		return undefined;
 	}
-	const defs = binding(scope, type.typeName.name)?.defs;
+	const defs = typeDefinitions(scope, type.typeName.name);
 	const [definition] = defs ?? [];
 	const unique = defs?.length === ONE && definition !== undefined;
 	if (unique) {
@@ -118,7 +120,7 @@ function builtinName(type: TSTypeReference, scope: Scope.Scope): string | undefi
 		return undefined;
 	}
 	const { name } = type.typeName;
-	if ((binding(scope, name)?.defs.length ?? NONE) === NONE) {
+	if (typeDefinitions(scope, name) === undefined) {
 		return name;
 	}
 	return undefined;

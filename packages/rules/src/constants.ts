@@ -8,6 +8,7 @@ const NODE_TYPE = {
 	ExportNamedDeclaration: "ExportNamedDeclaration",
 	Program: "Program",
 	Identifier: "Identifier",
+	PropertyDefinition: "PropertyDefinition",
 	BlockStatement: "BlockStatement",
 	ReturnStatement: "ReturnStatement",
 	CallExpression: "CallExpression",

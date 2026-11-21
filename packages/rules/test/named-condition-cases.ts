@@ -5,6 +5,7 @@ function readFixture(path: string): string {
 }
 
 const inlineValid = [
+	"if (register(class { ready = a && b })) {}",
 	"if (isAdmin) {}",
 	"switch (value) { case a && b: break; }",
 	"if (!isAdmin) {}",
@@ -27,6 +28,9 @@ const inlineValid = [
 ];
 
 const inlineInvalid = [
+	{ code: "if (register(class { [a && b] = value })) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "if (register(class { static ready = a && b })) {}", errors: [{ messageId: "namedBoolean" }] },
+	{ code: "class C { ready = a && b ? yes : no }", errors: [{ messageId: "namedBoolean" }] },
 	{ code: "if (exists && isUser && hasPrivileges) {}", errors: [{ messageId: "namedBoolean" }] },
 	{ code: "if (a || b) {}", errors: [{ messageId: "namedBoolean" }] },
 	{ code: "if (!(a && b)) {}", errors: [{ messageId: "namedBoolean" }] },

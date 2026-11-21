@@ -14,73 +14,80 @@ function guard(type: string, expression: string): string {
 	return `const check = (v: unknown): v is ${type} => ${expression};`;
 }
 
+const reportedCases = [
+	{
+		name: "required field in local alias",
+		code: `type W = { id: string }; function test(v: unknown): v is W { return ${object}; }`,
+		messageId: "uncheckedFields",
+	},
+	{
+		name: "interface declared after guard",
+		code: `${guard("Workspace", dictionary)} ${workspace}`,
+		messageId: "uncheckedFields",
+	},
+	{
+		name: "inline required field, reversed comparisons",
+		code: guard("{ id: string }", 'null != v && "object" == typeof v'),
+		messageId: "uncheckedFields",
+	},
+	{ name: "object check for an array", code: guard("string[]", object), messageId: "uncheckedArray" },
+	{
+		name: "object check for readonly array",
+		code: guard("ReadonlyArray<unknown>", object),
+		messageId: "uncheckedArray",
+	},
+	{
+		name: "primitive union elements",
+		code: guard("(string | number)[]", "Array.isArray(v)"),
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "type alias named Array does not shadow the runtime Array",
+		code: `type Array = { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "interface named Array does not shadow the runtime Array",
+		code: `interface Array { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "type parameter named Array does not shadow the runtime Array",
+		code: "function check<Array>(v: unknown): v is string[] { return Array.isArray(v); }",
+		messageId: "uncheckedElements",
+	},
+	{ name: "string array", code: guard("string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
+	{
+		name: "array check after redundant object and null checks",
+		code: guard("string[]", `${object} && Array.isArray(v)`),
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "array check before redundant null check",
+		code: guard("string[]", "Array.isArray(v) && null != v"),
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "function expression with any input",
+		code: "const check = function(v: any): v is Array<number> { return Array.isArray(v); };",
+		messageId: "uncheckedElements",
+	},
+	{ name: "readonly array", code: guard("readonly string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
+	{
+		name: "array of local objects",
+		code: `${workspace} ${guard("ReadonlyArray<Workspace>", "Array.isArray(v)")}`,
+		messageId: "uncheckedElements",
+	},
+	{
+		name: "Record value does not shadow the dictionary type",
+		code: `const Record = 42; ${guard("Record<string, number>", dictionary)}`,
+		messageId: "uncheckedValues",
+	},
+	{ name: "dictionary of numbers", code: guard("Record<string, number>", dictionary), messageId: "uncheckedValues" },
+];
+
 describe("no-shallow-type-predicate reports", () => {
-	it.each([
-		{
-			name: "required field in local alias",
-			code: `type W = { id: string }; function test(v: unknown): v is W { return ${object}; }`,
-			messageId: "uncheckedFields",
-		},
-		{
-			name: "interface declared after guard",
-			code: `${guard("Workspace", dictionary)} ${workspace}`,
-			messageId: "uncheckedFields",
-		},
-		{
-			name: "inline required field, reversed comparisons",
-			code: guard("{ id: string }", 'null != v && "object" == typeof v'),
-			messageId: "uncheckedFields",
-		},
-		{ name: "object check for an array", code: guard("string[]", object), messageId: "uncheckedArray" },
-		{
-			name: "object check for readonly array",
-			code: guard("ReadonlyArray<unknown>", object),
-			messageId: "uncheckedArray",
-		},
-		{
-			name: "primitive union elements",
-			code: guard("(string | number)[]", "Array.isArray(v)"),
-			messageId: "uncheckedElements",
-		},
-		{
-			name: "type alias named Array does not shadow the runtime Array",
-			code: `type Array = { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
-			messageId: "uncheckedElements",
-		},
-		{
-			name: "interface named Array does not shadow the runtime Array",
-			code: `interface Array { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
-			messageId: "uncheckedElements",
-		},
-		{
-			name: "type parameter named Array does not shadow the runtime Array",
-			code: "function check<Array>(v: unknown): v is string[] { return Array.isArray(v); }",
-			messageId: "uncheckedElements",
-		},
-		{ name: "string array", code: guard("string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
-		{
-			name: "array check after redundant object and null checks",
-			code: guard("string[]", `${object} && Array.isArray(v)`),
-			messageId: "uncheckedElements",
-		},
-		{
-			name: "array check before redundant null check",
-			code: guard("string[]", "Array.isArray(v) && null != v"),
-			messageId: "uncheckedElements",
-		},
-		{
-			name: "function expression with any input",
-			code: "const check = function(v: any): v is Array<number> { return Array.isArray(v); };",
-			messageId: "uncheckedElements",
-		},
-		{ name: "readonly array", code: guard("readonly string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
-		{
-			name: "array of local objects",
-			code: `${workspace} ${guard("ReadonlyArray<Workspace>", "Array.isArray(v)")}`,
-			messageId: "uncheckedElements",
-		},
-		{ name: "dictionary of numbers", code: guard("Record<string, number>", dictionary), messageId: "uncheckedValues" },
-	])("reports $name", ({ code, messageId }) => {
+	it.each(reportedCases)("reports $name", ({ code, messageId }) => {
 		// Arrange
 		expect.hasAssertions();
 		const tester = new RuleTester();
@@ -100,6 +107,10 @@ describe("no-shallow-type-predicate reports", () => {
 
 describe("no-shallow-type-predicate exclusions", () => {
 	it.each([
+		{
+			name: "an inner value does not hide an outer Record type",
+			code: `type Record<K,V> = object; { const Record = 42; ${guard("Record<string, number>", dictionary)} }`,
+		},
 		{ name: "unconstrained dictionary", code: guard("Record<string, unknown>", dictionary) },
 		{ name: "union including unknown", code: guard("Array<number | unknown>", "Array.isArray(v)") },
 		{ name: "shadowed Array type", code: `type Array<T> = object; ${guard("Array<number>", object)}` },

@@ -27,6 +27,14 @@ function readFixture(path: string): string {
 
 const valid: TestCase[] = [
 	{
+		name: "static import and re-export attributes do not contribute to ordinary string counts",
+		code: [
+			"import a from 'a' with { 'custom-format': 'custom-value' };",
+			"export * from 'b' with { 'custom-format': 'custom-value' };",
+			"use('custom-format', 'custom-value');",
+		].join("\n"),
+	},
+	{
 		name: "tags can distinguish templates with the same cooked value",
 		code: "String.raw`abcdefghij\\n`; String.raw`abcdefghij\\x0a`; use('abcdefghij\\n');",
 	},
@@ -83,6 +91,11 @@ const valid: TestCase[] = [
 ];
 
 const invalid: InvalidTestCase[] = [
+	{
+		name: "dynamic import options remain ordinary expressions",
+		code: "import('a', { with: { format: 'custom-value' } }); use('custom-value', 'custom-value');",
+		errors: duplicateErrors({ occurrences: 3 }),
+	},
 	{
 		name: "dynamic imports and ordinary strings count even when the same path is statically imported",
 		code: "import 'example-package';\nimport('example-package');\nuse('example-package');\nuse('example-package');",

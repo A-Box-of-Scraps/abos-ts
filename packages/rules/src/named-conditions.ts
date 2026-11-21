@@ -28,8 +28,11 @@ function getConditionMessage(parent: Rule.Node, child: Rule.Node): string | unde
 function findCondition(node: Rule.Node): { test: Node; messageId: string } | undefined {
 	for (let child = node; child.parent !== null; child = child.parent) {
 		const { parent } = child;
-		// Predicate bodies define their own logic, even when passed inside a condition.
-		if (functionTypes.has(parent.type)) {
+		// Instance initializers run on construction; computed keys and static initializers run at class definition.
+		const instanceInitializer = parent.type === NODE_TYPE.PropertyDefinition && !parent.static
+			&& parent.value === child;
+		const deferred = instanceInitializer || functionTypes.has(parent.type);
+		if (deferred) {
 			return undefined;
 		}
 		const messageId = getConditionMessage(parent, child);
