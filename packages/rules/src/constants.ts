@@ -38,6 +38,7 @@ const NODE_TYPE = {
 	WhileStatement: "WhileStatement",
 	Literal: "Literal",
 	LogicalExpression: "LogicalExpression",
+	TaggedTemplateExpression: "TaggedTemplateExpression",
 	TemplateLiteral: "TemplateLiteral",
 	UnaryExpression: "UnaryExpression",
 	SwitchStatement: "SwitchStatement",

@@ -11,12 +11,14 @@ interface Options {
 	shortString?: number;
 }
 
-function isStaticModuleSource(node: Node, parent: Node): boolean {
-	const isModuleDeclaration = parent.type === NODE_TYPE.ImportDeclaration
-		|| parent.type === NODE_TYPE.ExportNamedDeclaration
-		|| parent.type === NODE_TYPE.ExportAllDeclaration;
-	return isModuleDeclaration && parent.source === node;
-}
+// Direct literal children in these positions name modules or exports, not runtime values.
+const moduleSyntaxParents = new Set<string>([
+	NODE_TYPE.ImportDeclaration,
+	NODE_TYPE.ExportNamedDeclaration,
+	NODE_TYPE.ExportAllDeclaration,
+	"ImportSpecifier",
+	"ExportSpecifier",
+]);
 
 export const noDuplicateStrings: Rule.RuleModule = {
 	meta: {
@@ -62,13 +64,16 @@ export const noDuplicateStrings: Rule.RuleModule = {
 			Literal(node) {
 				const { parent, value } = node;
 				const isDirective = "directive" in parent && typeof parent.directive === "string";
-				const isCountedString = typeof value === "string" && !isDirective && !isStaticModuleSource(node, parent);
+				const isCountedString = typeof value === "string" && !isDirective && !moduleSyntaxParents.has(parent.type);
 				if (isCountedString) {
 					collect(node, value);
 				}
 			},
 			TemplateLiteral(node) {
-				if (node.expressions.length === EMPTY_EXPRESSIONS) {
+				const { parent } = node;
+				const isTagged = parent.type === NODE_TYPE.TaggedTemplateExpression && parent.quasi === node;
+				const isStaticString = !isTagged && node.expressions.length === EMPTY_EXPRESSIONS;
+				if (isStaticString) {
 					const value = node.quasis.at(FIRST_QUASI)?.value.cooked;
 					const hasCookedValue = value !== undefined && value !== null;
 					if (hasCookedValue) {

@@ -27,6 +27,21 @@ function readFixture(path: string): string {
 
 const valid: TestCase[] = [
 	{
+		name: "tags can distinguish templates with the same cooked value",
+		code: "String.raw`abcdefghij\\n`; String.raw`abcdefghij\\x0a`; use('abcdefghij\\n');",
+	},
+	{
+		name: "quoted import, export and namespace names are not ordinary strings",
+		code: [
+			"import { 'external-name' as a } from 'pkg';",
+			"export { a as 'external-name' };",
+			"export { 'external-name' as b } from 'pkg';",
+			"export * as 'namespace-name' from 'other';",
+			"use('namespace-name', 'namespace-name');",
+			"use('external-name', 'external-name');",
+		].join("\n"),
+	},
+	{
 		name: "static imports and re-exports do not count toward the threshold",
 		code: [
 			"import { a } from 'example-package';",

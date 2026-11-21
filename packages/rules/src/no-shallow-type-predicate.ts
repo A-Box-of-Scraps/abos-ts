@@ -23,6 +23,11 @@ const NOT = "!";
 const TYPEOF = "typeof";
 const ONE = 1;
 const NONE = 0;
+const typeOnlyDeclarations = new Set<string>([
+	NODE_TYPE.TSTypeAliasDeclaration,
+	NODE_TYPE.TSInterfaceDeclaration,
+	"TSTypeParameter",
+]);
 const unconstrained = new Set<string>(["TSAnyKeyword", "TSUnknownKeyword"]);
 const concreteValues = new Set<string>([
 	"TSStringKeyword",
@@ -52,6 +57,17 @@ function binding(scope: Scope.Scope, name: string): Scope.Variable | undefined {
 		}
 	}
 	return undefined;
+}
+
+function hasValueBinding(scope: Scope.Scope, name: string): boolean {
+	for (let current: Scope.Scope | null = scope; current !== null; current = current.upper) {
+		const defs = current.set.get(name)?.defs;
+		const definesValue = defs?.some((definition) => !typeOnlyDeclarations.has(tsNode(definition.node).type)) ?? false;
+		if (definesValue) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function requiredFields(members: TSSignature[]): boolean {
@@ -169,7 +185,7 @@ function isArrayCall(expr: Expression, name: string, scope: Scope.Scope): boolea
 	const { callee } = expr;
 	const staticMember = callee.type === NODE_TYPE.MemberExpression && !callee.computed;
 	const callsIsArray = staticMember && isParameter(callee.object, ARRAY) && isParameter(callee.property, "isArray");
-	return callsIsArray && (binding(scope, ARRAY)?.defs.length ?? NONE) === NONE;
+	return callsIsArray && !hasValueBinding(scope, ARRAY);
 }
 
 function objectTest(expr: Expression, name: string): boolean {

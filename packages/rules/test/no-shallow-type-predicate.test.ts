@@ -42,6 +42,21 @@ describe("no-shallow-type-predicate reports", () => {
 			code: guard("(string | number)[]", "Array.isArray(v)"),
 			messageId: "uncheckedElements",
 		},
+		{
+			name: "type alias named Array does not shadow the runtime Array",
+			code: `type Array = { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
+			messageId: "uncheckedElements",
+		},
+		{
+			name: "interface named Array does not shadow the runtime Array",
+			code: `interface Array { id: number }; ${guard("string[]", "Array.isArray(v)")}`,
+			messageId: "uncheckedElements",
+		},
+		{
+			name: "type parameter named Array does not shadow the runtime Array",
+			code: "function check<Array>(v: unknown): v is string[] { return Array.isArray(v); }",
+			messageId: "uncheckedElements",
+		},
 		{ name: "string array", code: guard("string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
 		{
 			name: "array check after redundant object and null checks",
@@ -107,6 +122,10 @@ describe("no-shallow-type-predicate exclusions", () => {
 			code: "function assert(v: unknown): asserts v is string[] { if (!Array.isArray(v)) throw Error(); }",
 		},
 		{ name: "function signature only", code: "type Check = (v: unknown) => v is string[];" },
+		{
+			name: "inner type alias does not hide an outer runtime binding",
+			code: `const Array = schema; { type Array = object; ${guard("number[]", "Array.isArray(v)")} }`,
+		},
 		{ name: "shadowed Array value", code: `const Array = schema; ${guard("number[]", "Array.isArray(v)")}` },
 		{
 			name: "shadowed Record type",
