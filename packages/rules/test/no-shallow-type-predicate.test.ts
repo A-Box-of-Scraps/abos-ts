@@ -33,6 +33,16 @@ describe("no-shallow-type-predicate reports", () => {
 		},
 		{ name: "string array", code: guard("string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
 		{
+			name: "array check after redundant object and null checks",
+			code: guard("string[]", `${object} && Array.isArray(v)`),
+			messageId: "uncheckedElements",
+		},
+		{
+			name: "array check before redundant null check",
+			code: guard("string[]", "Array.isArray(v) && null != v"),
+			messageId: "uncheckedElements",
+		},
+		{
 			name: "function expression with any input",
 			code: "const check = function(v: any): v is Array<number> { return Array.isArray(v); };",
 			messageId: "uncheckedElements",
@@ -70,6 +80,7 @@ describe("no-shallow-type-predicate exclusions", () => {
 		{ name: "object", code: guard("object", object) },
 		{ name: "optional fields only", code: guard("{ id?: string }", object) },
 		{ name: "narrow input", code: "function test(v: number | string[]): v is string[] { return Array.isArray(v); }" },
+		{ name: "contradictory array checks", code: guard("string[]", "Array.isArray(v) && !Array.isArray(v)") },
 		{ name: "checks elements", code: guard("string[]", 'Array.isArray(v) && v.every(x => typeof x === "string")') },
 		{ name: "checks a field", code: `${workspace} ${guard("Workspace", `${object} && "name" in v`)}` },
 		{ name: "delegate", code: `${workspace} ${guard("Workspace", "schema.safeParse(v).success")}` },

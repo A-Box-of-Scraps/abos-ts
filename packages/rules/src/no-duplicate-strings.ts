@@ -53,8 +53,11 @@ export const noDuplicateStrings: Rule.RuleModule = {
 
 		return {
 			Literal(node) {
-				if (typeof node.value === "string") {
-					collect(node, node.value);
+				const { parent, value } = node;
+				const isDirective = "directive" in parent && typeof parent.directive === "string";
+				const isCountedString = typeof value === "string" && !isDirective;
+				if (isCountedString) {
+					collect(node, value);
 				}
 			},
 			TemplateLiteral(node) {

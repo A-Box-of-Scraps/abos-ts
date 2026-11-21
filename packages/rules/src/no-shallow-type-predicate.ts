@@ -196,17 +196,17 @@ function conjunction(expr: Expression): Expression[] {
 }
 
 function checkedContainer(expr: Expression, name: string, scope: Scope.Scope): Container | undefined {
-	if (isArrayCall(expr, name, scope)) {
+	const terms = conjunction(expr).filter((term) => !excludesNull(term, name));
+	const nonObjectTerms = terms.filter((term) => !objectTest(term, name));
+	const checksArray = nonObjectTerms.length > NONE && nonObjectTerms.every((term) => isArrayCall(term, name, scope));
+	if (checksArray) {
 		return ARRAY_CONTAINER;
 	}
-	const terms = conjunction(expr);
-	const onlyContainerChecks = terms.every((term) => {
-		const excludesArray = term.type === NODE_TYPE.UnaryExpression && term.operator === NOT
-			&& isArrayCall(term.argument, name, scope);
-		return excludesArray || excludesNull(term, name) || objectTest(term, name);
-	});
-	const checksObject = onlyContainerChecks && terms.some((term) => objectTest(term, name));
-	if (checksObject) {
+	const onlyArrayExclusions = nonObjectTerms.every((term) =>
+		term.type === NODE_TYPE.UnaryExpression && term.operator === NOT && isArrayCall(term.argument, name, scope)
+	);
+	const objectOnly = nonObjectTerms.length < terms.length && onlyArrayExclusions;
+	if (objectOnly) {
 		return OBJECT;
 	}
 	return undefined;

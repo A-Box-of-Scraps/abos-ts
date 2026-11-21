@@ -26,6 +26,10 @@ function readFixture(path: string): string {
 }
 
 const valid: TestCase[] = [
+	{
+		name: "program and function directives do not contribute to the threshold",
+		code: "'use strict'; function f() { 'use strict'; } use('use strict', 'use strict');",
+	},
 	{ name: "strings below the default threshold", code: "use('long enough'); use('long enough')" },
 	{ name: "strings shorter than ten characters", code: "use('123456789', '123456789', '123456789')" },
 	{
@@ -55,6 +59,11 @@ const valid: TestCase[] = [
 ];
 
 const invalid: InvalidTestCase[] = [
+	{
+		name: "ordinary occurrences of a directive value still count",
+		code: "'use strict'; use('use strict', 'use strict'); 'use strict';",
+		errors: duplicateErrors({ occurrences: 3 }),
+	},
 	{
 		name: "default threshold",
 		code: "use('long enough', 'long enough', 'long enough')",
