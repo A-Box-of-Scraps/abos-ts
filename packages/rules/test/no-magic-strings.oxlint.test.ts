@@ -1,5 +1,5 @@
 import { noMagicStrings } from "#src/index";
-import { invalid, typescriptValid, valid } from "#test/no-magic-string-cases";
+import { invalid, typescriptInvalid, typescriptValid, valid } from "#test/no-magic-string-cases";
 import { toOxlintError } from "#test/oxlint-errors";
 import { RuleTester } from "oxlint/plugins-dev";
 import { describe, expect, it } from "vitest";
@@ -22,7 +22,7 @@ describe("no-magic-strings in Oxlint", () => {
 		expect(runCase).not.toThrow();
 	});
 
-	it.each(invalid)("reports $name", (testCase) => {
+	it.each([...invalid, ...typescriptInvalid])("reports $name", (testCase) => {
 		// Arrange
 		expect.hasAssertions();
 		const tester = new RuleTester();

@@ -31,6 +31,17 @@ describe("no-shallow-type-predicate reports", () => {
 			code: guard("{ id: string }", 'null != v && "object" == typeof v'),
 			messageId: "uncheckedFields",
 		},
+		{ name: "object check for an array", code: guard("string[]", object), messageId: "uncheckedArray" },
+		{
+			name: "object check for readonly array",
+			code: guard("ReadonlyArray<unknown>", object),
+			messageId: "uncheckedArray",
+		},
+		{
+			name: "primitive union elements",
+			code: guard("(string | number)[]", "Array.isArray(v)"),
+			messageId: "uncheckedElements",
+		},
 		{ name: "string array", code: guard("string[]", "Array.isArray(v)"), messageId: "uncheckedElements" },
 		{
 			name: "array check after redundant object and null checks",
@@ -75,6 +86,8 @@ describe("no-shallow-type-predicate reports", () => {
 describe("no-shallow-type-predicate exclusions", () => {
 	it.each([
 		{ name: "unconstrained dictionary", code: guard("Record<string, unknown>", dictionary) },
+		{ name: "union including unknown", code: guard("Array<number | unknown>", "Array.isArray(v)") },
+		{ name: "shadowed Array type", code: `type Array<T> = object; ${guard("Array<number>", object)}` },
 		{ name: "unconstrained arrays", code: guard("unknown[]", "Array.isArray(v)") },
 		{ name: "unknown array alias", code: `type Anything = unknown; ${guard("Anything[]", "Array.isArray(v)")}` },
 		{ name: "object", code: guard("object", object) },

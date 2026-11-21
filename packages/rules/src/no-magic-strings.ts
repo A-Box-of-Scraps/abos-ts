@@ -1,4 +1,6 @@
 import { EMPTY_EXPRESSIONS, FIRST_QUASI, NODE_TYPE } from "#src/constants";
+import { tsNode } from "#src/ts-node";
+import type { Node as TSNode } from "@oxc-project/types";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
@@ -16,7 +18,16 @@ const typeofResults = new Set([
 	"function",
 ]);
 
-function getStaticString(node: Node): string | undefined {
+function unwrapAssertions(node: TSNode): TSNode {
+	const assertion = node.type === NODE_TYPE.TSAsExpression || node.type === NODE_TYPE.TSTypeAssertion
+		|| node.type === NODE_TYPE.TSSatisfiesExpression || node.type === NODE_TYPE.TSNonNullExpression;
+	if (assertion) {
+		return unwrapAssertions(node.expression);
+	}
+	return node;
+}
+
+function getStaticString(node: TSNode): string | undefined {
 	const literalValue = node.type === NODE_TYPE.Literal && node.value;
 	if (typeof literalValue === "string") {
 		return literalValue;
@@ -28,7 +39,8 @@ function getStaticString(node: Node): string | undefined {
 	return undefined;
 }
 
-function isTypeofExpression(node: Node | undefined): boolean {
+function isTypeofExpression(comparedWith: Node | undefined): boolean {
+	const node = comparedWith && unwrapAssertions(tsNode(comparedWith));
 	return node?.type === NODE_TYPE.UnaryExpression && node.operator === TYPEOF_OPERATOR;
 }
 
@@ -45,7 +57,7 @@ export const noMagicStrings: Rule.RuleModule = {
 	},
 	create(context) {
 		function checkString(node: Node, comparedWith?: Node): void {
-			const value = getStaticString(node);
+			const value = getStaticString(unwrapAssertions(tsNode(node)));
 			const isBlank = value === undefined || value.trim() === "";
 			if (isBlank) {
 				return;

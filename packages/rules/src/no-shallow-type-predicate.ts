@@ -1,4 +1,5 @@
 import { NODE_TYPE } from "#src/constants";
+import { tsNode } from "#src/ts-node";
 import type {
 	ArrowFunctionExpression,
 	Expression,
@@ -42,12 +43,6 @@ const inequality = new Set(["!==", "!="]);
 
 type GuardFunction = FunctionNode | ArrowFunctionExpression;
 type Container = typeof OBJECT | typeof ARRAY_CONTAINER;
-
-function tsNode(node: Node): TSNode {
-	// The TypeScript parser supplies TS-ESTree nodes beyond ESLint's JavaScript-only listener types.
-	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-	return node as unknown as TSNode;
-}
 
 function binding(scope: Scope.Scope, name: string): Scope.Variable | undefined {
 	for (let current: Scope.Scope | null = scope; current !== null; current = current.upper) {
@@ -93,6 +88,12 @@ function hasFields(type: TSType, scope: Scope.Scope): boolean {
 }
 
 function concreteValue(type: TSType | undefined, scope: Scope.Scope): boolean {
+	if (type?.type === NODE_TYPE.TSParenthesizedType) {
+		return concreteValue(type.typeAnnotation, scope);
+	}
+	if (type?.type === NODE_TYPE.TSUnionType) {
+		return type.types.every((member) => concreteValue(member, scope));
+	}
 	return type !== undefined && (concreteValues.has(type.type) || hasFields(type, scope));
 }
 
@@ -107,19 +108,19 @@ function builtinName(type: TSTypeReference, scope: Scope.Scope): string | undefi
 	return undefined;
 }
 
-function claimsElements(type: TSType, scope: Scope.Scope): boolean {
+function arrayElement(type: TSType, scope: Scope.Scope): TSType | undefined {
 	if (type.type === NODE_TYPE.TSArrayType) {
-		return concreteValue(type.elementType, scope);
+		return type.elementType;
 	}
 	const readonly = type.type === NODE_TYPE.TSTypeOperator && type.operator === READONLY;
 	if (readonly) {
-		return claimsElements(type.typeAnnotation, scope);
+		return arrayElement(type.typeAnnotation, scope);
 	}
-	if (type.type !== NODE_TYPE.TSTypeReference) {
-		return false;
+	const builtinArray = type.type === NODE_TYPE.TSTypeReference && arrayTypes.has(builtinName(type, scope) ?? "");
+	if (builtinArray) {
+		return type.typeArguments?.params.at(NONE);
 	}
-	const [element] = type.typeArguments?.params ?? [];
-	return arrayTypes.has(builtinName(type, scope) ?? "") && concreteValue(element, scope);
+	return undefined;
 }
 
 function claimsValues(type: TSType, scope: Scope.Scope): boolean {
@@ -131,19 +132,26 @@ function claimsValues(type: TSType, scope: Scope.Scope): boolean {
 	return key?.type === NODE_TYPE.TSStringKeyword && concreteValue(value, scope);
 }
 
-function missingCheck(type: TSType, container: Container | undefined, scope: Scope.Scope): string | undefined {
-	const uncheckedElements = container === ARRAY_CONTAINER && claimsElements(type, scope);
-	if (uncheckedElements) {
-		return "uncheckedElements";
-	}
-	if (container !== OBJECT) {
-		return undefined;
+function missingObjectCheck(type: TSType, scope: Scope.Scope): string | undefined {
+	if (arrayElement(type, scope) !== undefined) {
+		return "uncheckedArray";
 	}
 	if (hasFields(type, scope)) {
 		return "uncheckedFields";
 	}
 	if (claimsValues(type, scope)) {
 		return "uncheckedValues";
+	}
+	return undefined;
+}
+
+function missingCheck(type: TSType, container: Container | undefined, scope: Scope.Scope): string | undefined {
+	if (container === OBJECT) {
+		return missingObjectCheck(type, scope);
+	}
+	const uncheckedElements = container === ARRAY_CONTAINER && concreteValue(arrayElement(type, scope), scope);
+	if (uncheckedElements) {
+		return "uncheckedElements";
 	}
 	return undefined;
 }
@@ -262,6 +270,7 @@ export const noShallowTypePredicate: Rule.RuleModule = {
 		docs: { description: "Flag explicit type predicates that check only the container, not its contents." },
 		schema: [],
 		messages: {
+			uncheckedArray: "This checks for an object, but does not establish that the value is an array.",
 			uncheckedElements: "This checks for an array, but not the element type promised by the predicate.",
 			uncheckedFields: "This checks for an object, but none of the required fields promised by the predicate.",
 			uncheckedValues: "This checks for an object, but not the dictionary value type promised by the predicate.",

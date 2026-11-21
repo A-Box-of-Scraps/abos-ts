@@ -90,8 +90,17 @@ const invalid = [
 ];
 
 const typescriptValid = [
+	{ name: "wrapped typeof comparison", code: "(typeof input as string) === ('string' as const)" },
+	{ name: "wrapped blank literal", code: "status === (' ' satisfies string)" },
+	{ name: "assertion on nonliteral", code: "status === (other as 'enabled')" },
 	{ name: "enum member comparison", code: "enum Status { Enabled = 'enabled' }; status === Status.Enabled" },
 	{ name: "string literal types", code: "type StatusName = 'pending' | 'enabled'" },
 ].map(({ name, code }) => ({ name, code, filename: "input.ts" }));
 
-export { invalid, typescriptValid, valid };
+const typescriptInvalid = [
+	{ name: "nested assertions in comparison", code: "status === (('running' as const) satisfies string)" },
+	{ name: "asserted case label", code: "switch (status) { case <string>'running': break; }" },
+	{ name: "asserted switch discriminant", code: "switch (`running`!) {}" },
+].map(({ name, code }) => ({ name, code, filename: "input.ts", errors: [{ messageId: "magicString" }] }));
+
+export { invalid, typescriptInvalid, typescriptValid, valid };
