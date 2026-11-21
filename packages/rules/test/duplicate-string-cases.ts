@@ -191,6 +191,15 @@ const invalid: InvalidTestCase[] = [
 ];
 
 const typescriptValid: TestCase[] = [{
+	name: "import-type option keys and values do not count toward runtime duplicates",
+	code: [
+		"type A = import('a', { with: { 'resolution-mode': 'import' } }).A;",
+		"type B = import('b', { with: { 'resolution-mode': 'import' } }).B;",
+		"use('resolution-mode', 'import');",
+	].join("\n"),
+	options: [{ shortString: 0 }],
+	filename: "input.ts",
+}, {
 	name: "import assignments and module augmentations do not contribute to the runtime threshold",
 	code: [
 		"import service = require('example-package');",
@@ -209,6 +218,19 @@ const typescriptValid: TestCase[] = [{
 }];
 
 const typescriptInvalid: InvalidTestCase[] = [{
+	name: "runtime import options count independently of type import options",
+	code: [
+		"type A = import('a', { with: { 'resolution-mode': 'import' } }).A;",
+		"import('b', { with: { 'resolution-mode': 'import' } });",
+		"use('resolution-mode', 'resolution-mode');",
+	].join("\n"),
+	filename: "input.ts",
+	errors: [
+		{ occurrences: 3, line: 2, column: 23 },
+		{ occurrences: 3, line: 3, column: 5 },
+		{ occurrences: 3, line: 3, column: 24 },
+	],
+}, {
 	name: "ordinary require calls count even alongside an import assignment",
 	code:
 		"import service = require('example-package');\nrequire('example-package');\nuse('example-package', 'example-package');",

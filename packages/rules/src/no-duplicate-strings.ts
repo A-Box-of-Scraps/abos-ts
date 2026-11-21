@@ -60,9 +60,11 @@ export const noDuplicateStrings: Rule.RuleModule = {
 		const shortString = options.shortString ?? DEFAULT_SHORT_STRING;
 		const ignoredStrings = new Set(options.ignoreStrings);
 		const occurrences = new Map<string, Node[]>();
+		const activeImportTypeOptions = new Set<Node>();
 
 		function collect(node: Node, value: string): void {
-			const isExcluded = value.length < shortString || ignoredStrings.has(value);
+			const isExcluded = activeImportTypeOptions.size > EMPTY_EXPRESSIONS || value.length < shortString
+				|| ignoredStrings.has(value);
 			if (isExcluded) {
 				return;
 			}
@@ -75,6 +77,12 @@ export const noDuplicateStrings: Rule.RuleModule = {
 		}
 
 		return {
+			"TSImportType > ObjectExpression.options"(node: Node) {
+				activeImportTypeOptions.add(node);
+			},
+			"TSImportType > ObjectExpression.options:exit"(node: Node) {
+				activeImportTypeOptions.delete(node);
+			},
 			Literal(node) {
 				const { parent, value } = node;
 				const isDirective = "directive" in parent && typeof parent.directive === "string";
