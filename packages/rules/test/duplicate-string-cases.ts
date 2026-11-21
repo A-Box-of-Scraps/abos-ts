@@ -191,12 +191,21 @@ const invalid: InvalidTestCase[] = [
 ];
 
 const typescriptValid: TestCase[] = [{
+	name: "import types do not contribute to the runtime string threshold",
+	code: "type A = import('example-package').A; type B = typeof import('example-package'); import('example-package');",
+	filename: "input.ts",
+}, {
 	name: "typed string below the threshold",
 	code: "const message: string = 'long enough'",
 	filename: "input.ts",
 }];
 
 const typescriptInvalid: InvalidTestCase[] = [{
+	name: "runtime import and ordinary values still count alongside an import type",
+	code: "type A = import('example-package').A; import('example-package'); use('example-package', 'example-package');",
+	filename: "input.ts",
+	errors: duplicateErrors({ occurrences: 3 }),
+}, {
 	name: "duplicate strings in typed declarations",
 	code: "const a: string = 'long enough'; const b: string = 'long enough'; const c: string = 'long enough';",
 	filename: "input.ts",

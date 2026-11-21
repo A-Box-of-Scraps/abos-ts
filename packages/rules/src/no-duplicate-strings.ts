@@ -1,4 +1,5 @@
 import { EMPTY_EXPRESSIONS, FIRST_OPTION, FIRST_QUASI, NODE_TYPE } from "#src/constants";
+import { tsNode } from "#src/ts-node";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
@@ -16,10 +17,20 @@ const moduleSyntaxParents = new Set<string>([
 	NODE_TYPE.ImportDeclaration,
 	NODE_TYPE.ExportNamedDeclaration,
 	NODE_TYPE.ExportAllDeclaration,
+	NODE_TYPE.TSImportType,
 	"ImportAttribute",
 	"ImportSpecifier",
 	"ExportSpecifier",
 ]);
+
+function isModuleSyntax(parent: Rule.Node): boolean {
+	if (moduleSyntaxParents.has(parent.type)) {
+		return true;
+	}
+	// Some TS-ESTree versions wrap the module specifier in a literal type.
+	const type = tsNode(parent);
+	return type.type === NODE_TYPE.TSLiteralType && type.parent?.type === NODE_TYPE.TSImportType;
+}
 
 export const noDuplicateStrings: Rule.RuleModule = {
 	meta: {
@@ -65,7 +76,7 @@ export const noDuplicateStrings: Rule.RuleModule = {
 			Literal(node) {
 				const { parent, value } = node;
 				const isDirective = "directive" in parent && typeof parent.directive === "string";
-				const isCountedString = typeof value === "string" && !isDirective && !moduleSyntaxParents.has(parent.type);
+				const isCountedString = typeof value === "string" && !isDirective && !isModuleSyntax(parent);
 				if (isCountedString) {
 					collect(node, value);
 				}

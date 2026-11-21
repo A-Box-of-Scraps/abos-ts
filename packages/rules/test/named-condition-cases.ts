@@ -77,12 +77,19 @@ const invalid = [
 ];
 
 const typescriptValid = [{
+	name: "instance auto-accessor initializer is deferred",
+	code: "if (register(class { accessor ready = a && b })) {}",
+	filename: "input.ts",
+}, {
 	name: "typed named boolean",
 	code: "const isAdmin: boolean = exists && isUser; if (isAdmin) { allow(); }",
 	filename: "input.ts",
 }];
 
 const typescriptInvalid = [
+	{ name: "static auto-accessor initializer", code: "if (register(class { static accessor ready = a && b })) {}" },
+	{ name: "computed auto-accessor key", code: "if (register(class { accessor [a && b] = value })) {}" },
+	{ name: "condition inside accessor initializer", code: "class C { accessor ready = a && b ? yes : no }" },
 	{ name: "as expression", code: "if ((exists && isUser) as boolean) { allow(); }" },
 	{ name: "satisfies expression", code: "if ((isGuest || isAnonymous) satisfies boolean) { deny(); }" },
 	{ name: "type assertion", code: "if (<boolean>(exists && isUser)) { allow(); }" },

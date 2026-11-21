@@ -1,4 +1,5 @@
 import { NODE_TYPE } from "#src/constants";
+import { tsNode } from "#src/ts-node";
 import type { Rule } from "eslint";
 import type { Node } from "estree";
 
@@ -25,13 +26,17 @@ function getConditionMessage(parent: Rule.Node, child: Rule.Node): string | unde
 	return undefined;
 }
 
+function isInstanceInitializer(parent: Rule.Node, child: Rule.Node): boolean {
+	const member = tsNode(parent);
+	const field = member.type === NODE_TYPE.PropertyDefinition || member.type === NODE_TYPE.AccessorProperty;
+	return field && !member.static && member.value === tsNode(child);
+}
+
 function findCondition(node: Rule.Node): { test: Node; messageId: string } | undefined {
 	for (let child = node; child.parent !== null; child = child.parent) {
 		const { parent } = child;
 		// Instance initializers run on construction; computed keys and static initializers run at class definition.
-		const instanceInitializer = parent.type === NODE_TYPE.PropertyDefinition && !parent.static
-			&& parent.value === child;
-		const deferred = instanceInitializer || functionTypes.has(parent.type);
+		const deferred = functionTypes.has(parent.type) || isInstanceInitializer(parent, child);
 		if (deferred) {
 			return undefined;
 		}
