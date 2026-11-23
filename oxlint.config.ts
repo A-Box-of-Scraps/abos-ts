@@ -78,7 +78,7 @@ const typeSafetyRules = {
 } satisfies NonNullable<OxlintConfig["rules"]>;
 
 export default defineConfig({
-	plugins: ["import", "oxc", "typescript", "unicorn", "vitest"],
+	plugins: ["import", "node", "oxc", "promise", "typescript", "unicorn", "vitest"],
 	categories: {
 		correctness: "error",
 		suspicious: "error",

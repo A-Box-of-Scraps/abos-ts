@@ -1,7 +1,11 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { runCommand } from "#scripts/run-command";
+import { execFile } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { gt, prerelease, valid } from "semver";
+
+const exec = promisify(execFile);
 
 const registry = "https://registry.npmjs.org";
 const notFound = 404;
@@ -24,8 +28,9 @@ function isWorkspace(value: unknown): value is Workspace {
 		&& (!("private" in value) || typeof value.private === "boolean");
 }
 
-function publicWorkspaces(): Workspace[] {
-	const data: unknown = JSON.parse(execFileSync("npm", ["query", ".workspace"], { encoding: "utf8" }));
+async function publicWorkspaces(): Promise<Workspace[]> {
+	const { stdout } = await exec("npm", ["query", ".workspace"]);
+	const data: unknown = JSON.parse(stdout);
 	if (!Array.isArray(data) || !data.every(isWorkspace)) {
 		throw new Error("Invalid npm workspace list");
 	}
@@ -82,32 +87,33 @@ function releaseChangelog(changelog: string, version: string, date: string): str
 	return changelog.replace(heading, `## [Unreleased]${newline}${newline}## [${version}] - ${date}`);
 }
 
-function publish(name: string, version: string): void {
+async function publish(name: string, version: string): Promise<void> {
 	const args = ["publish", "--workspace", name, "--registry", registry];
 	// Leave the stable tag implicit so npm can reject a stale release if the registry changed since lookup.
 	if (prerelease(version) !== null) {
 		args.push("--tag", "next");
 	}
-	execFileSync("npm", args, { stdio: "inherit" });
+	await runCommand("npm", args);
 }
 
-function publishWorkspace({ name, location, version }: Workspace, date: string): void {
+async function publishWorkspace({ name, location, version }: Workspace, date: string): Promise<void> {
 	const path = join(location, "CHANGELOG.md");
-	const original = readFileSync(path, "utf8");
-	writeFileSync(path, releaseChangelog(original, version, date));
+	const original = await readFile(path, "utf8");
+	await writeFile(path, releaseChangelog(original, version, date));
 	try {
-		publish(name, version);
+		await publish(name, version);
 	} catch (error) {
-		writeFileSync(path, original);
+		await writeFile(path, original);
 		throw error;
 	}
 	// The workflow commits these even if a later workspace fails to publish.
-	execFileSync("git", ["add", "--", path]);
+	await exec("git", ["add", "--", path]);
 }
 
 async function main(): Promise<void> {
+	const workspaces = await publicWorkspaces();
 	const candidates = await Promise.all(
-		publicWorkspaces().map(async (workspace) => ({
+		workspaces.map(async (workspace) => ({
 			workspace,
 			eligible: shouldPublish(workspace.version, await publishedVersions(workspace.name)),
 		})),
@@ -115,7 +121,8 @@ async function main(): Promise<void> {
 	const date = new Date().toISOString().replace(/T.*$/u, "");
 	for (const { workspace, eligible } of candidates) {
 		if (eligible) {
-			publishWorkspace(workspace, date);
+			// eslint-disable-next-line no-await-in-loop -- Stage each release before attempting the next one.
+			await publishWorkspace(workspace, date);
 		} else {
 			console.log(`Skipping ${workspace.name}@${workspace.version}`);
 		}

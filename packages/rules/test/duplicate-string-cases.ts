@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 interface TestCase {
 	name: string;
@@ -21,8 +21,8 @@ function duplicateErrors({ occurrences }: { occurrences: number }): ExpectedErro
 	return Array.from({ length: occurrences }, () => ({ occurrences }));
 }
 
-function readFixture(path: string): string {
-	return readFileSync(new URL(`fixtures/no-duplicate-strings/${path}`, import.meta.url), "utf8");
+function readFixture(path: string): Promise<string> {
+	return readFile(new URL(`fixtures/no-duplicate-strings/${path}`, import.meta.url), "utf8");
 }
 
 const valid: TestCase[] = [
@@ -143,12 +143,12 @@ const invalid: InvalidTestCase[] = [
 	},
 	{
 		name: "nested scopes",
-		code: readFixture("invalid/nested-scopes.js"),
+		code: await readFixture("invalid/nested-scopes.js"),
 		errors: duplicateErrors({ occurrences: 3 }),
 	},
 	{
 		name: "multiple duplicate groups with different counts",
-		code: readFixture("invalid/multiple-groups.js"),
+		code: await readFixture("invalid/multiple-groups.js"),
 		errors: [
 			{ occurrences: 3, line: 1, column: 5 },
 			{ occurrences: 4, line: 2, column: 5 },

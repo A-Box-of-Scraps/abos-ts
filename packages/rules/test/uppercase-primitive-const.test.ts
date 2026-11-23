@@ -1,12 +1,12 @@
 import plugin from "#src/index";
 import { Linter } from "eslint";
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 const ruleId = "abos/uppercase-primitive-const";
 
-function readFixture(path: string): string {
-	return readFileSync(new URL(`fixtures/uppercase-primitive-const/${path}`, import.meta.url), "utf8");
+function readFixture(path: string): Promise<string> {
+	return readFile(new URL(`fixtures/uppercase-primitive-const/${path}`, import.meta.url), "utf8");
 }
 
 function lint(code: string): Linter.LintMessage[] {
@@ -14,10 +14,10 @@ function lint(code: string): Linter.LintMessage[] {
 }
 
 describe("uppercase-primitive-const", () => {
-	it.each(["names.js", "initializers.js", "bindings.js"])("allows %s", (file) => {
+	it.each(["names.js", "initializers.js", "bindings.js"])("allows %s", async (file) => {
 		// Arrange
 		expect.hasAssertions();
-		const code = readFixture(`valid/${file}`);
+		const code = await readFixture(`valid/${file}`);
 
 		// Act
 		const messages = lint(code);
@@ -32,10 +32,10 @@ describe("uppercase-primitive-const", () => {
 			names: ["userName", "maxRetries", "debt", "offset", "negativeZero", "enabled", "missing", "big", "path"],
 		},
 		{ file: "mixed-export.js", names: ["max", "apiUrl"] },
-	])("reports only the offending bindings in $file", ({ file, names }) => {
+	])("reports only the offending bindings in $file", async ({ file, names }) => {
 		// Arrange
 		expect.hasAssertions();
-		const code = readFixture(`invalid/${file}`);
+		const code = await readFixture(`invalid/${file}`);
 
 		// Act
 		const messages = lint(code);

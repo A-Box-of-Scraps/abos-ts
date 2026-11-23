@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
-function readFixture(path: string): string {
-	return readFileSync(new URL(`fixtures/named-conditions/${path}`, import.meta.url), "utf8");
+function readFixture(path: string): Promise<string> {
+	return readFile(new URL(`fixtures/named-conditions/${path}`, import.meta.url), "utf8");
 }
 
 const inlineValid = [
@@ -55,23 +55,23 @@ const inlineInvalid = [
 
 const valid = [
 	...inlineValid.map((code) => ({ name: code, code })),
-	...[
+	...await Promise.all([
 		"valid/named-boolean.js",
 		"valid/loop-predicate.js",
 		"valid/function-boundaries.js",
-	].map((name) => ({ name, code: readFixture(name) })),
+	].map(async (name) => ({ name, code: await readFixture(name) }))),
 ];
 
 const invalid = [
 	...inlineInvalid.map(({ code, errors }) => ({ name: code, code, errors })),
-	...[
+	...await Promise.all([
 		{ name: "invalid/nested-branches.js", errors: [{ messageId: "namedBoolean" }, { messageId: "namedBoolean" }] },
 		{ name: "invalid/nested-loops.js", errors: [{ messageId: "namedPredicate" }, { messageId: "namedBoolean" }] },
 		{ name: "invalid/function-boundaries.js", errors: [{ messageId: "namedBoolean" }, { messageId: "namedBoolean" }] },
-	].map(({ name, errors }) => ({ name, errors, code: readFixture(name) })),
+	].map(async ({ name, errors }) => ({ name, errors, code: await readFixture(name) }))),
 	{
 		name: "invalid/callback-condition.js",
-		code: readFixture("invalid/callback-condition.js"),
+		code: await readFixture("invalid/callback-condition.js"),
 		errors: [{ messageId: "namedBoolean", line: 3, column: 7, endLine: 3, endColumn: 32 }],
 	},
 ];

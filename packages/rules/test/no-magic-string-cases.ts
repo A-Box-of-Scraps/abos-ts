@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
-function readFixture(path: string): string {
-	return readFileSync(new URL(`fixtures/no-magic-strings/${path}`, import.meta.url), "utf8");
+function readFixture(path: string): Promise<string> {
+	return readFile(new URL(`fixtures/no-magic-strings/${path}`, import.meta.url), "utf8");
 }
 
 const typeofResults = ["undefined", "object", "boolean", "number", "bigint", "string", "symbol", "function"];
@@ -65,7 +65,9 @@ const inlineInvalid = [
 const valid = [
 	...inlineValid.map((code) => ({ name: code, code })),
 	...dynamicTemplateCases,
-	...["valid/switches.js", "valid/typeof-switch.js"].map((name) => ({ name, code: readFixture(name) })),
+	...await Promise.all(
+		["valid/switches.js", "valid/typeof-switch.js"].map(async (name) => ({ name, code: await readFixture(name) })),
+	),
 ];
 
 const invalid = [
@@ -74,17 +76,17 @@ const invalid = [
 		code,
 		errors: Array.from({ length: count }, () => ({ messageId: "magicString" })),
 	})),
-	...[
+	...await Promise.all([
 		{ name: "invalid/switch-cases.js", count: 2 },
 		{ name: "invalid/switch-discriminants.js", count: 2 },
-	].map(({ name, count }) => ({
+	].map(async ({ name, count }) => ({
 		name,
-		code: readFixture(name),
+		code: await readFixture(name),
 		errors: Array.from({ length: count }, () => ({ messageId: "magicString" })),
-	})),
+	}))),
 	{
 		name: "invalid/nested-switch.js",
-		code: readFixture("invalid/nested-switch.js"),
+		code: await readFixture("invalid/nested-switch.js"),
 		errors: [{ messageId: "magicString", line: 2, column: 7, endLine: 2, endColumn: 16 }],
 	},
 ];

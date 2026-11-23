@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 interface TestCase {
 	name: string;
@@ -50,7 +50,7 @@ const invalid: InvalidTestCase[] = [
 	{ name: "zero maximum", code: "a && b", options: [{ max: 0 }], count: 1, operators: 1, max: 0 },
 	{
 		name: "separate expressions",
-		code: readFileSync(
+		code: await readFile(
 			new URL("fixtures/expression-complexity/invalid/separate-expressions.js", import.meta.url),
 			"utf8",
 		),

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { runCommand } from "#scripts/run-command";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,15 +11,15 @@ async function main(): Promise<void> {
 
 	await build({ configFile: fileURLToPath(new URL("../vite.config.ts", import.meta.url)) });
 
-	execFileSync(process.execPath, [
+	await runCommand(process.execPath, [
 		resolve(compilerDirectory, "bin/tsc"),
 		"--project",
 		resolve("tsconfig.build.json"),
-	], { stdio: "inherit" });
+	]);
 
-	execFileSync(process.execPath, [
+	await runCommand(process.execPath, [
 		fileURLToPath(new URL("bundle-types.ts", import.meta.url)),
-	], { stdio: "inherit" });
+	]);
 }
 
 await main();

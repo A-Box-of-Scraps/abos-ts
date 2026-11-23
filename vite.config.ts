@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { isBuiltin } from "node:module";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
-const manifest: unknown = JSON.parse(readFileSync(resolve("package.json"), "utf8"));
+const manifest: unknown = JSON.parse(await readFile(resolve("package.json"), "utf8"));
 if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
 	throw new TypeError("Expected a package.json object");
 }
