@@ -39,8 +39,8 @@ In `oxlint.config.ts`:
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  jsPlugins: [{ name: "abos", specifier: "@a-box-of-scraps/ts-rules" }],
-  rules: { "abos/named-conditions": "warn" },
+	jsPlugins: [{ name: "abos", specifier: "@a-box-of-scraps/ts-rules" }],
+	rules: { "abos/named-conditions": "warn" },
 });
 ```
 
