@@ -1,4 +1,4 @@
-import { type RuleTester } from "oxlint/plugins-dev";
+import type { RuleTester } from "oxlint/plugins-dev";
 
 const COLUMN_OFFSET = 1;
 
