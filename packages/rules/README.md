@@ -33,13 +33,15 @@ export default [{
 npm install --save-dev oxlint @a-box-of-scraps/ts-rules
 ```
 
-In `.oxlintrc.json`:
+In `oxlint.config.ts`:
 
-```json
-{
-  "jsPlugins": [{ "name": "abos", "specifier": "@a-box-of-scraps/ts-rules" }],
-  "rules": { "abos/named-conditions": "warn" }
-}
+```ts
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  jsPlugins: [{ name: "abos", specifier: "@a-box-of-scraps/ts-rules" }],
+  rules: { "abos/named-conditions": "warn" },
+});
 ```
 
 ## Rules
