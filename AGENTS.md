@@ -35,6 +35,10 @@ vitest.config.ts
 
 - You must write tests that are easy to scan and understand with clear `Arrange / Act / Assert` sections.
 
+## Verification
+
+`npm run check` must pass to validate changes.
+
 ## Commits & Pull Requests
 
 - Follow the Conventional Commits specification for commit messages.
