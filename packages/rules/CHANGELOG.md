@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-24
+
 ### Fixed
 
 - [`no-duplicate-strings`](docs/rules/no-duplicate-strings.md) no longer counts directives, tagged templates, or strings
