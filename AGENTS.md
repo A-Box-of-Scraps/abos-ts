@@ -7,8 +7,9 @@ TypeScripts utilities and lint rules shared across projects.
 Here is an overview of the project:
 
 ```
-coverage/
 .githooks/
+.github
+coverage/
 node_modules/
 packages/
   rules/
@@ -37,7 +38,7 @@ vitest.config.ts
 
 ## Verification
 
-`npm run check` must pass to validate changes.
+At least `npm run check` must pass to validate changes.
 
 ## Commits & Pull Requests
 
