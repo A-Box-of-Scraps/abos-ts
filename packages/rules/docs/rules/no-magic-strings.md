@@ -1,17 +1,18 @@
 # no-magic-strings
 
 Use a named constant or enum member instead of a nonblank string literal on either side of an equality or ordering
-comparison, as a `switch` expression, or as a `case` label. Template literals without substitutions follow the same
-rule.
+comparison, as a `switch` expression, or as a `case` label. Untagged templates without substitutions follow the same
+rule; tagged templates and templates with substitutions do not. TypeScript assertions and `satisfies` do not hide a
+literal: `status === ("shipped" as const)` is still reported.
 
 ## Accepted
 
 ```ts
-const shipped = "shipped";
-if (status === shipped) notifyCustomer();
+const SHIPPED = "shipped";
+if (status === SHIPPED) notifyCustomer();
 
 switch (status) {
-	case shipped:
+	case SHIPPED:
 		showTracking();
 		break;
 }

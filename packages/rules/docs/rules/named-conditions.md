@@ -1,7 +1,12 @@
 # named-conditions
 
-Name the decision instead of writing `&&` or `||` directly in the test of an `if`, ternary, `while`, `do…while`, or
-`for`. A comparison or `??` alone does not trigger the rule.
+Name the decision instead of writing `&&` or `||` in the test of an `if`, ternary, `while`, `do…while`, or `for`. A
+comparison or `??` alone does not trigger the rule.
+
+Operators nested in the test still count: `if (check(a && b))` is reported. Operators inside a callback do not count
+toward the enclosing test: `if (items.some(item => item.ready && item.valid))` is accepted. The same boundary applies to
+class instance field and accessor initializers, but not to computed keys or static initializers. Each affected test is
+reported once.
 
 ## Accepted
 

@@ -1,7 +1,8 @@
 # expression-complexity
 
-Limits how many `&&`, `||`, and `??` operators appear in one expression. Parentheses, negation, and TypeScript type
-assertions do not reset the count. The default allows three operators; the fourth triggers a report.
+Counts `&&`, `||`, and `??` in a logical chain. Parentheses, `!`, TypeScript assertions, and `satisfies` do not split
+the chain. Separate call arguments count independently: `check(a && b, c || d)` has two chains of one operator each. By
+default, a chain with more than three operators is reported once.
 
 ## Accepted
 

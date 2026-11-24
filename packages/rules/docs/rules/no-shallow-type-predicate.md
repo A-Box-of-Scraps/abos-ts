@@ -1,8 +1,9 @@
 # no-shallow-type-predicate
 
 Flags an explicit `value is T` predicate whose only evidence is an array or object check, even though `T` promises
-particular elements, required fields, or dictionary values. The function name does not matter. Start with `warn`; there
-is no automatic fix because either the check or the promised type might need to change.
+particular elements, required fields, or dictionary values. An object check alone also fails to establish that a value
+is an array, even when the target is `unknown[]`. The function name does not matter. Start with `warn`; there is no
+automatic fix because either the check or the promised type might need to change.
 
 ## Accepted
 
